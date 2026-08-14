@@ -20,7 +20,8 @@ import { Input } from "../components/ui/Input";
 import { NumPad } from "../components/ui/NumPad";
 import { PINDots } from "../components/ui/PINDots";
 import { hashPIN } from "../lib/crypto";
-import { Staff } from "../types";
+import { Cafe, Staff } from "../types";
+import { readJson, writeJson } from "../lib/storage";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -58,7 +59,7 @@ export default function LoginPage() {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
-  const [cafeForStaff, setCafeForStaff] = useState<any>(null);
+  const [cafeForStaff, setCafeForStaff] = useState<Cafe | null>(null);
 
   const handleOwnerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,11 +102,9 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       if (!navigator.onLine) {
-        const cachedCafeStr = localStorage.getItem("nook_offline_cafe");
-        const cachedStaffStr = localStorage.getItem("nook_offline_staff");
-        if (cachedCafeStr && cachedStaffStr) {
-          const cachedCafe = JSON.parse(cachedCafeStr);
-          const cachedStaff = JSON.parse(cachedStaffStr);
+        const cachedCafe = readJson<Cafe | null>("nook_offline_cafe", null);
+        const cachedStaff = readJson<Staff[]>("nook_offline_staff", []);
+        if (cachedCafe && cachedStaff.length > 0) {
           if (String(cachedCafe.invite_code) === inviteCode) {
             setCafeForStaff(cachedCafe);
             setStaffList(cachedStaff);
@@ -127,11 +126,9 @@ export default function LoginPage() {
         .maybeSingle();
 
       if (error && error.message.includes("Failed to fetch")) {
-        const cachedCafeStr = localStorage.getItem("nook_offline_cafe");
-        const cachedStaffStr = localStorage.getItem("nook_offline_staff");
-        if (cachedCafeStr && cachedStaffStr) {
-          const cachedCafe = JSON.parse(cachedCafeStr);
-          const cachedStaff = JSON.parse(cachedStaffStr);
+        const cachedCafe = readJson<Cafe | null>("nook_offline_cafe", null);
+        const cachedStaff = readJson<Staff[]>("nook_offline_staff", []);
+        if (cachedCafe && cachedStaff.length > 0) {
           if (String(cachedCafe.invite_code) === inviteCode) {
             setCafeForStaff(cachedCafe);
             setStaffList(cachedStaff);
@@ -189,8 +186,8 @@ export default function LoginPage() {
       setSelectedStaff(staff[0]); // Select first staff by default to prevent silent failure
       
       // Save to offline cache
-      localStorage.setItem("nook_offline_cafe", JSON.stringify(cafe));
-      localStorage.setItem("nook_offline_staff", JSON.stringify(staff));
+      writeJson("nook_offline_cafe", cafe);
+      writeJson("nook_offline_staff", staff);
       
       setStaffStep(2);
     } catch (error: any) {
@@ -240,7 +237,7 @@ export default function LoginPage() {
           expires_at: expiresAt.toISOString(),
         };
 
-        localStorage.setItem("nook_staff_session", JSON.stringify(session));
+        writeJson("nook_staff_session", session);
         setStaff(selectedStaff);
         setCafe(cafeForStaff);
         navigate("/dashboard");

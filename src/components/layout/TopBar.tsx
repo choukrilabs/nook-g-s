@@ -4,15 +4,16 @@ import { useUIStore } from '../../stores/uiStore'
 import { supabase } from '../../lib/supabase'
 import { useNavigate, Link } from 'react-router-dom'
 import { GlobalSearch } from './GlobalSearch'
-import { useEffect, useState } from 'react'
+import { StaffPermissions } from '../../types'
 
 export const TopBar = () => {
   const { type, staff, cafe, logout } = useAuthStore()
   const { logo } = useUIStore()
   const navigate = useNavigate()
 
-  const hasSettings = type === 'owner' || !!staff?.permissions?.settings;
-  const hasClients = type === 'owner' || !!staff?.permissions?.clients;
+  const permissions = staff?.permissions as Partial<StaffPermissions> | undefined;
+  const hasSettings = type === 'owner' || !!permissions?.settings;
+  const hasClients = type === 'owner' || !!permissions?.clients;
 
   const handleLogout = async () => {
     if (type === 'owner') {

@@ -132,7 +132,7 @@ export default function ReportsPage() {
 
   const bestSellingItem = (Object.values(itemSales) as {name: string, qty: number}[]).sort((a, b) => b.qty - a.qty)[0]
 
-  const categoryRevenue = sessions.reduce((acc: Record<string, number>, s) => {
+  const categoryRevenue: Record<string, number> = sessions.reduce((acc: Record<string, number>, s) => {
     if (Array.isArray(s.extras)) {
       s.extras.forEach((extra: any) => {
         const product = products.find(p => p.id === extra.id)
@@ -141,7 +141,7 @@ export default function ReportsPage() {
       })
     }
     return acc
-  }, { boisson: 0, nourriture: 0, autre: 0 })
+  }, { boisson: 0, nourriture: 0, autre: 0 } as Record<string, number>)
 
   // Chart Data
   const chartData = sessions.reduce((acc: any[], s) => {
@@ -439,7 +439,7 @@ export default function ReportsPage() {
               { id: 'autre', icon: Package, label: t('cat.autre') || 'Autres', color: '#8b5cf6' },
             ].map(cat => {
               const amount = categoryRevenue[cat.id] || 0
-              const totalExtras = Object.values(categoryRevenue).reduce((a, b) => a + b, 0)
+              const totalExtras = Object.values(categoryRevenue).reduce((sum, value) => sum + value, 0)
               const percentage = totalExtras > 0 ? (amount / totalExtras) * 100 : 0
               return (
                 <div key={cat.id} className="space-y-3">
