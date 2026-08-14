@@ -2,24 +2,65 @@ import { supabase } from './supabase';
 import { useSessionStore } from '../stores/sessionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
+import Dexie from 'dexie';
 import { db } from './offlineDB';
+import { readJson, writeJson } from './storage';
+import { ClientAccount, Product, Session, Staff } from '../types';
 
 export interface SyncOperation {
   id: string;
   table: string;
   action: 'insert' | 'update' | 'delete';
-  payload: any;
+  payload: Record<string, unknown>;
   timestamp: number;
   retries?: number;
 }
 
-const getQueue = (): SyncOperation[] => {
-  const queue = localStorage.getItem('nook-sync-queue');
-  return queue ? JSON.parse(queue) : [];
-};
+const getQueue = (): SyncOperation[] => readJson<SyncOperation[]>('nook-sync-queue', []);
 
 const saveQueue = (queue: SyncOperation[]) => {
-  localStorage.setItem('nook-sync-queue', JSON.stringify(queue));
+  writeJson('nook-sync-queue', queue);
+};
+
+const syncTable = async <T extends { id: string; cafe_id: string }>(
+  table: Dexie.Table<T, string>,
+  cafeId: string,
+  rows: T[],
+) => {
+  const serverIds = new Set(rows.map((row) => row.id));
+  const cachedRows = await table.where('cafe_id').equals(cafeId).toArray();
+  const staleIds = cachedRows
+    .filter((row) => !serverIds.has(row.id))
+    .map((row) => row.id);
+
+  await db.transaction('rw', table, async () => {
+    if (staleIds.length > 0) await table.bulkDelete(staleIds);
+    if (rows.length > 0) await table.bulkPut(rows);
+  });
+};
+
+let isProcessingQueue = false;
+
+const getPayloadId = (payload: Record<string, unknown>): string => {
+  if (typeof payload.id !== 'string') {
+    throw new Error('Queued offline mutation is missing a string id');
+  }
+  return payload.id;
+};
+
+const putOfflineRecord = async (table: string, payload: Record<string, unknown>) => {
+  if (table === 'products') await db.products.put(payload as unknown as Product);
+  if (table === 'client_accounts') await db.clients.put(payload as unknown as ClientAccount);
+  if (table === 'staff') await db.staff.put(payload as unknown as Staff);
+  if (table === 'sessions') await db.sessions.put(payload as unknown as Session);
+};
+
+const deleteOfflineRecord = async (table: string, payload: Record<string, unknown>) => {
+  const id = getPayloadId(payload);
+  if (table === 'products') await db.products.delete(id);
+  if (table === 'client_accounts') await db.clients.delete(id);
+  if (table === 'staff') await db.staff.delete(id);
+  if (table === 'sessions') await db.sessions.delete(id);
 };
 
 export const syncDataToOfflineDB = async (cafeId: string) => {
@@ -34,10 +75,10 @@ export const syncDataToOfflineDB = async (cafeId: string) => {
         .gte('started_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     ]);
 
-    if (productsRes.data) await db.products.bulkPut(productsRes.data);
-    if (clientsRes.data) await db.clients.bulkPut(clientsRes.data);
-    if (staffRes.data) await db.staff.bulkPut(staffRes.data);
-    if (sessionsRes.data) await db.sessions.bulkPut(sessionsRes.data);
+    if (productsRes.data) await syncTable(db.products, cafeId, productsRes.data);
+    if (clientsRes.data) await syncTable(db.clients, cafeId, clientsRes.data);
+    if (staffRes.data) await syncTable(db.staff, cafeId, staffRes.data);
+    if (sessionsRes.data) await syncTable(db.sessions, cafeId, sessionsRes.data);
 
   } catch (err) {
     console.error("Failed to sync offline DB", err);
@@ -47,8 +88,8 @@ export const syncDataToOfflineDB = async (cafeId: string) => {
 export const queueMutation = async (
   table: string, 
   action: 'insert' | 'update' | 'delete', 
-  payload: any, 
-  optimisticData?: any
+  payload: Record<string, unknown>,
+  optimisticData?: Record<string, unknown>
 ) => {
   if (navigator.onLine) {
     // Try online execution first
@@ -58,9 +99,9 @@ export const queueMutation = async (
       if (action === 'insert') {
         response = await query.insert(payload).select().single();
       } else if (action === 'update') {
-        response = await query.update(payload).eq('id', payload.id).select().single();
+        response = await query.update(payload).eq('id', getPayloadId(payload)).select().single();
       } else if (action === 'delete') {
-        response = await query.delete().eq('id', payload.id);
+        response = await query.delete().eq('id', getPayloadId(payload));
       }
       
       if (response && response.error) throw response.error;
@@ -89,12 +130,12 @@ export const queueMutation = async (
   if (table === 'sessions') {
     const { addSession, updateSession, removeSession } = useSessionStore.getState();
     if (action === 'insert') {
-      addSession(optimisticData || { ...payload, id: opId });
+      addSession((optimisticData || { ...payload, id: opId }) as unknown as Session);
     } else if (action === 'update') {
       if ((optimisticData || payload).status !== 'active') {
-         removeSession(payload.id);
+         removeSession(getPayloadId(payload));
       } else {
-         updateSession(optimisticData || payload);
+         updateSession((optimisticData || payload) as unknown as Session);
       }
     }
   }
@@ -103,15 +144,9 @@ export const queueMutation = async (
   try {
      const dataToStore = optimisticData || { ...payload, id: opId };
      if (action === 'insert' || action === 'update') {
-        if (table === 'products') await db.products.put(dataToStore);
-        if (table === 'client_accounts') await db.clients.put(dataToStore);
-        if (table === 'staff') await db.staff.put(dataToStore);
-        if (table === 'sessions') await db.sessions.put(dataToStore);
+        await putOfflineRecord(table, dataToStore);
      } else if (action === 'delete') {
-        if (table === 'products') await db.products.delete(payload.id);
-        if (table === 'client_accounts') await db.clients.delete(payload.id);
-        if (table === 'staff') await db.staff.delete(payload.id);
-        if (table === 'sessions') await db.sessions.delete(payload.id);
+        await deleteOfflineRecord(table, payload);
      }
   } catch(e) {
      console.error("Could not optimistically write to OfflineDB", e);
@@ -123,14 +158,19 @@ export const queueMutation = async (
 };
 
 export const processSyncQueue = async () => {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine || isProcessingQueue) return;
 
+  isProcessingQueue = true;
   const queue = getQueue();
-  if (queue.length === 0) return;
+  if (queue.length === 0) {
+    isProcessingQueue = false;
+    return;
+  }
 
   let newQueue = [...queue];
   let hasErrors = false;
 
+  try {
   for (const op of queue) {
     try {
       let query = supabase.from(op.table);
@@ -143,10 +183,10 @@ export const processSyncQueue = async () => {
         const { error: err } = await query.insert(payload);
         error = err;
       } else if (op.action === 'update') {
-        const { error: err } = await query.update(payload).eq('id', payload.id);
+        const { error: err } = await query.update(payload).eq('id', getPayloadId(payload));
         error = err;
       } else if (op.action === 'delete') {
-        const { error: err } = await query.delete().eq('id', payload.id);
+        const { error: err } = await query.delete().eq('id', getPayloadId(payload));
         error = err;
       }
 
@@ -156,15 +196,9 @@ export const processSyncQueue = async () => {
 
       // Sync offline DB immediately for local consistancy
       if (op.action === 'insert' || op.action === 'update') {
-         if (op.table === 'products') await db.products.put(payload);
-         if (op.table === 'client_accounts') await db.clients.put(payload);
-         if (op.table === 'staff') await db.staff.put(payload);
-         if (op.table === 'sessions') await db.sessions.put(payload);
+         await putOfflineRecord(op.table, payload);
       } else if (op.action === 'delete') {
-         if (op.table === 'products') await db.products.delete(payload.id);
-         if (op.table === 'client_accounts') await db.clients.delete(payload.id);
-         if (op.table === 'staff') await db.staff.delete(payload.id);
-         if (op.table === 'sessions') await db.sessions.delete(payload.id);
+         await deleteOfflineRecord(op.table, payload);
       }
 
       // Remove from queue upon success
@@ -203,7 +237,10 @@ export const processSyncQueue = async () => {
   // Optionnally refresh full offline db when queue is fully cleared
   const state = useAuthStore.getState();
   if (state.cafe) {
-     syncDataToOfflineDB(state.cafe.id);
+     await syncDataToOfflineDB(state.cafe.id);
+  }
+  } finally {
+    isProcessingQueue = false;
   }
 };
 

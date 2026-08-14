@@ -98,13 +98,7 @@ export default function NewSessionPage() {
       if (!cafe) return;
 
       if (!navigator.onLine) {
-        const localProducts = await db.products
-          .where("active")
-          .equals(1)
-          .toArray();
-        // Wait, Dexie boolean might be true/false or 1/0.
-        // Let's just fetch all and filter in memory to be safe:
-        const allProds = await db.products.toArray();
+        const allProds = await db.products.where("cafe_id").equals(cafe.id).toArray();
         setProducts(
           allProds
             .filter((p) => p.active)
