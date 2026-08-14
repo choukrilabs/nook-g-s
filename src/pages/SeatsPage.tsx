@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { useAuthStore } from "../stores/authStore";
@@ -14,7 +14,7 @@ export default function SeatsPage() {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -22,15 +22,11 @@ export default function SeatsPage() {
 
   const totalSeats = cafe.total_seats;
   const seats = Array.from({ length: totalSeats }, (_, i) => i + 1);
-  const sessionsBySeat = useMemo(
-    () => new Map(activeSessions.map((session) => [session.seat_number, session])),
-    [activeSessions],
-  );
 
   return (
     <div className="min-h-screen bg-bg pb-24">
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
-        <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 text-text3 hover:text-text">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text">
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">État des places</h1>
@@ -51,7 +47,7 @@ export default function SeatsPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {seats.map((seat) => {
-            const session = sessionsBySeat.get(seat);
+            const session = activeSessions.find((s) => s.seat_number === seat);
             const isOccupied = !!session;
 
             let timeStr = "";

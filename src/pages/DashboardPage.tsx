@@ -272,17 +272,6 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="bg-success/5 border border-success/10 px-4 py-2.5 rounded-2xl flex items-center gap-3 backdrop-blur-xl text-success shrink-0">
-                <CheckCircle size={14} />
-                <div className="flex flex-col">
-                  <span className="text-[13px] font-bold text-success leading-none">
-                    {todayStats.completed}
-                  </span>
-                  <span className="text-[8px] font-black text-success/50 uppercase tracking-tighter mt-0.5">
-                    FINIES
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
         </motion.div>
@@ -297,15 +286,15 @@ export default function DashboardPage() {
               </span>
               <Link
                 to="/seats"
-                className="text-[11px] text-text3 font-normal ml-auto bg-surface2 hover:bg-surface2/80 transition-colors px-2 py-1 border border-border/50 rounded-lg cursor-pointer"
+                className="text-[11px] font-bold text-text ml-auto bg-surface2 hover:bg-surface border border-border/50 rounded-full px-3 py-1.5 transition-all active:scale-95 flex items-center gap-1 shadow-sm"
               >
                 {cafe ? cafe.total_seats - activeSessions.length : 0} /{" "}
-                {cafe?.total_seats || 0} places libres
+                {cafe?.total_seats || 0} places
               </Link>
             </h2>
             <Link
               to="/sessions"
-              className="text-xs font-semibold text-text2 hover:text-text hover:underline ml-3"
+              className="text-xs font-bold text-text2 hover:text-text bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full transition-all active:scale-95"
             >
               {t("dashboard.history") || "Historique"}
             </Link>
@@ -384,18 +373,6 @@ export default function DashboardPage() {
                     <div className="text-sm font-mono font-extrabold text-accent">
                       {session.total_amount.toFixed(2)}{" "}
                       <span className="text-[10px] opacity-60">DH</span>
-                    </div>
-                    <div className="w-6 h-6 flex items-center justify-center rounded-lg bg-surface2/50 text-text3 border border-white/5">
-                      {session.payment_method === "cash" && (
-                        <Banknote size={12} />
-                      )}
-                      {session.payment_method === "card" && (
-                        <CreditCard size={12} />
-                      )}
-                      {session.payment_method === "account" && (
-                        <Wallet size={12} />
-                      )}
-                      {session.payment_method === "free" && <Gift size={12} />}
                     </div>
                   </div>
                 </motion.div>

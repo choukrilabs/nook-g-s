@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { db } from '../lib/offlineDB'
-import { readJson, writeJson } from '../lib/storage'
 
 export const useRealtime = () => {
   const { cafe, type, staff, setStaff, logout } = useAuthStore()
@@ -15,11 +14,10 @@ export const useRealtime = () => {
     // Initial load
     const loadSessions = async () => {
       // Show offline active sessions instantly
-      const localSessions = (await db.sessions
-          .where('cafe_id').equals(cafe.id)
-          .toArray())
-          .filter((session) => session.status === 'active')
-          .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
+      const localSessions = await db.sessions
+          .where('status').equals('active')
+          .reverse()
+          .sortBy('started_at');
       
       if (localSessions.length > 0) {
         setActiveSessions(localSessions);
@@ -95,12 +93,13 @@ export const useRealtime = () => {
               logout()
             } else {
               setStaff(updatedStaff)
-              const parsed = readJson<Record<string, unknown> | null>('nook_staff_session', null)
-              if (parsed) {
-                writeJson('nook_staff_session', {
+              const stored = localStorage.getItem('nook_staff_session')
+              if (stored) {
+                const parsed = JSON.parse(stored)
+                localStorage.setItem('nook_staff_session', JSON.stringify({
                   ...parsed,
                   permissions: updatedStaff.permissions
-                })
+                }))
               }
             }
           }

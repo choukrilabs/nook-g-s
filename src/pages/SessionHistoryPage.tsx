@@ -132,16 +132,6 @@ export default function SessionHistoryPage() {
     return format(date, 'EEEE d MMMM', { locale: fr })
   }
 
-  const getPaymentIcon = (method: string | null) => {
-    switch (method) {
-      case 'cash': return <Banknote size={14} />
-      case 'card': return <CreditCard size={14} />
-      case 'account': return <Wallet size={14} />
-      case 'free': return <Gift size={14} />
-      default: return null
-    }
-  }
-
   return (
     <div className="min-h-screen bg-bg pb-8">
       <TopBar />
@@ -287,9 +277,6 @@ export default function SessionHistoryPage() {
                       <div className="text-right">
                         <div className="text-sm font-mono font-bold text-text">
                           {session.total_amount ? session.total_amount.toFixed(2) : '0.00'} DH
-                        </div>
-                        <div className="flex justify-end mt-0.5 text-text3">
-                          {getPaymentIcon(session.payment_method)}
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-text3" />

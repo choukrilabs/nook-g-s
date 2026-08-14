@@ -12,7 +12,6 @@ import { useAuthStore } from "./stores/authStore";
 import { useSessionStore } from "./stores/sessionStore";
 import { useUIStore } from "./stores/uiStore";
 import { processSyncQueue } from "./lib/offlineSync";
-import { readJson } from "./lib/storage";
 import { Loader2 } from "lucide-react";
 import { ToastContainer } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
@@ -154,8 +153,9 @@ function AppRoutes() {
               return; // Keep existing Zustand state
             }
             // 2. Check Local Storage (Staff)
-            const parsed = readJson<{ staff_id: string; cafe_id: string; expires_at: string } | null>("nook_staff_session", null);
-            if (parsed) {
+            const staffSession = localStorage.getItem("nook_staff_session");
+            if (staffSession) {
+              const parsed = JSON.parse(staffSession);
               if (new Date(parsed.expires_at) > new Date()) {
                 const { data: staff, error: staffError } = await supabase
                   .from("staff")

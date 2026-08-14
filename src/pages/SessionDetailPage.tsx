@@ -603,25 +603,13 @@ export default function SessionDetailPage() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <label className="text-[10px] font-bold text-text3 uppercase tracking-widest">{t('sessions.payment_method')}</label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { id: 'cash', icon: Banknote, label: t('sessions.cash') },
-                { id: 'card', icon: CreditCard, label: t('sessions.card') },
-                { id: 'account', icon: Wallet, label: t('sessions.account') },
-                { id: 'free', icon: Gift, label: t('sessions.free') },
-              ].map(method => (
-                <button
-                  key={method.id}
-                  onClick={() => handleEndSession(method.id)}
-                  className="h-20 flex flex-col items-center justify-center gap-2 bg-surface2 border border-border rounded-xl hover:border-accent transition-all active:scale-95"
-                >
-                  <method.icon size={20} className="text-text2" />
-                  <span className="text-xs font-bold text-text">{method.label}</span>
-                </button>
-              ))}
-            </div>
+          <div className="pt-2">
+            <Button
+              className="w-full h-14"
+              onClick={() => handleEndSession('cash')}
+            >
+              Confirmer
+            </Button>
           </div>
         </div>
       </BottomSheet>

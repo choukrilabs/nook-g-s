@@ -132,7 +132,7 @@ export default function ReportsPage() {
 
   const bestSellingItem = (Object.values(itemSales) as {name: string, qty: number}[]).sort((a, b) => b.qty - a.qty)[0]
 
-  const categoryRevenue: Record<string, number> = sessions.reduce((acc: Record<string, number>, s) => {
+  const categoryRevenue = sessions.reduce((acc: Record<string, number>, s) => {
     if (Array.isArray(s.extras)) {
       s.extras.forEach((extra: any) => {
         const product = products.find(p => p.id === extra.id)
@@ -141,7 +141,7 @@ export default function ReportsPage() {
       })
     }
     return acc
-  }, { boisson: 0, nourriture: 0, autre: 0 } as Record<string, number>)
+  }, { boisson: 0, nourriture: 0, autre: 0 })
 
   // Chart Data
   const chartData = sessions.reduce((acc: any[], s) => {
@@ -163,40 +163,47 @@ export default function ReportsPage() {
 
     const doc = new jsPDF()
     
+    // Config
+    const primaryColor: [number, number, number] = [249, 115, 22]; // #f97316
+    const darkColor: [number, number, number] = [40, 40, 40];
+    
     // Header
     doc.setFontSize(22)
     doc.text(cafe.name, 14, 20)
     doc.setFontSize(12)
-    doc.text(`Rapport - Période: ${period === 'today' ? t('common.today') : period === 'week' ? t('common.thisWeek') : t('common.thisMonth')}`, 14, 30)
+    const periodLabel = period === 'today' ? t('common.today') : period === 'week' ? t('common.thisWeek') : t('common.thisMonth')
+    doc.text(`Rapport d'activité - Période : ${periodLabel}`, 14, 30)
     doc.setFontSize(10)
-    doc.text(`${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 36)
+    doc.setTextColor(100)
+    doc.text(`Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm')}`, 14, 36)
+    doc.setTextColor(0)
 
     // Summary Statistics
     doc.setFontSize(14)
-    doc.text('Résumé', 14, 50)
+    doc.text('1. Résumé Global', 14, 50)
     
     autoTable(doc, {
       startY: 55,
-      head: [['Sessions', 'Revenu Total', 'Moyenne (min)', 'Paiements (Espèces/Carte/Compte/Gratuit)']],
+      head: [['Total Sessions', 'Revenu Total', 'Durée Moyenne (min)']],
       body: [
         [
           stats.count.toString(), 
           `${stats.revenue.toFixed(2)} DH`, 
-          stats.avgDuration.toString(),
-          `${stats.payments.cash?.toFixed(2) || '0'} / ${stats.payments.card?.toFixed(2) || '0'} / ${stats.payments.account?.toFixed(2) || '0'} / ${stats.payments.free?.toFixed(2) || '0'}`
+          stats.avgDuration.toString()
         ]
       ],
       theme: 'grid',
-      headStyles: { fillColor: [249, 115, 22] }
+      headStyles: { fillColor: primaryColor }
     })
 
-    // Category Breakdown
-    let finalY = (doc as any).lastAutoTable.finalY || 80
+    let finalY = (doc as any).lastAutoTable.finalY + 15
+
+    // Breakdown tables
     doc.setFontSize(14)
-    doc.text('Revenus par Catégorie', 14, finalY + 15)
+    doc.text('2. Répartition par Catégorie', 14, finalY)
 
     autoTable(doc, {
-      startY: finalY + 20,
+      startY: finalY + 5,
       head: [['Boissons', 'Nourriture', 'Autres']],
       body: [
         [
@@ -206,13 +213,94 @@ export default function ReportsPage() {
         ]
       ],
       theme: 'grid',
-      headStyles: { fillColor: [40, 40, 40] }
+      headStyles: { fillColor: darkColor }
+    })
+    
+    finalY = (doc as any).lastAutoTable.finalY + 15
+    doc.setFontSize(14)
+    doc.text('3. Répartition par Mode de Paiement', 14, finalY)
+
+    autoTable(doc, {
+      startY: finalY + 5,
+      head: [['Espèces', 'Carte', 'Compte', 'Gratuit']],
+      body: [
+        [
+          `${(stats.payments.cash || 0).toFixed(2)} DH`,
+          `${(stats.payments.card || 0).toFixed(2)} DH`,
+          `${(stats.payments.account || 0).toFixed(2)} DH`,
+          `${(stats.payments.free || 0).toFixed(2)} DH`
+        ]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: darkColor }
     })
 
-    // Session Details
-    finalY = (doc as any).lastAutoTable.finalY || 120
+    finalY = (doc as any).lastAutoTable.finalY + 20
+
+    // Visual Chart (drawn natively)
+    if (finalY > doc.internal.pageSize.height - 80) {
+      doc.addPage()
+      finalY = 20
+    }
+    
     doc.setFontSize(14)
-    doc.text('Détails des Sessions', 14, finalY + 15)
+    doc.text('4. Évolution des Revenus', 14, finalY)
+    
+    if (chartData && chartData.length > 0) {
+      const chartHeight = 50;
+      const chartWidth = 180;
+      const marginX = 14;
+      
+      const maxRev = Math.max(...chartData.map((d: any) => d.revenue), 10);
+      const barWidth = Math.min((chartWidth - 20) / chartData.length, 12);
+      const gap = ((chartWidth - 20) - (barWidth * chartData.length)) / (chartData.length + 1);
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.line(marginX, finalY + 5, marginX, finalY + 5 + chartHeight); // Y
+      doc.line(marginX, finalY + 5 + chartHeight, marginX + chartWidth, finalY + 5 + chartHeight); // X
+      
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      doc.text(`${maxRev.toFixed(0)}`, marginX - 2, finalY + 8, { align: 'right' });
+      doc.text(`${(maxRev/2).toFixed(0)}`, marginX - 2, finalY + 5 + (chartHeight/2), { align: 'right' });
+      doc.text('0', marginX - 2, finalY + 5 + chartHeight, { align: 'right' });
+
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      
+      chartData.forEach((d: any, i: number) => {
+        const x = marginX + gap + (i * (barWidth + gap));
+        const barH = (d.revenue / maxRev) * chartHeight;
+        const y = finalY + 5 + chartHeight - barH;
+        
+        if (barH > 0) {
+          doc.rect(x, y, barWidth, barH, 'F');
+        }
+        
+        doc.setFontSize(7);
+        doc.setTextColor(100);
+        const label = chartData.length > 15 ? d.date.split('/')[0] : d.date; 
+        doc.text(label, x + (barWidth/2), finalY + 5 + chartHeight + 4, { align: 'center' });
+      });
+      
+      finalY += chartHeight + 20;
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text('Aucune donnée disponible pour le graphique.', 14, finalY + 10);
+      finalY += 20;
+    }
+
+    doc.setTextColor(0);
+
+    // Session Details
+    if (finalY > doc.internal.pageSize.height - 40) {
+      doc.addPage()
+      finalY = 20
+    }
+    
+    doc.setFontSize(14)
+    doc.text('5. Détails des Sessions', 14, finalY)
 
     const sessionData = sessions.map(s => [
       format(new Date(s.ended_at!), 'dd/MM/yyyy HH:mm'),
@@ -220,51 +308,25 @@ export default function ReportsPage() {
       s.seat_number?.toString() || '-',
       s.duration_minutes?.toString() || '0',
       `${s.total_amount.toFixed(2)} DH`,
-      s.payment_method || '-'
+      s.payment_method === 'cash' ? 'Espèces' : s.payment_method === 'card' ? 'Carte' : s.payment_method === 'account' ? 'Compte' : s.payment_method === 'free' ? 'Gratuit' : '-'
     ])
 
     autoTable(doc, {
-      startY: finalY + 20,
+      startY: finalY + 5,
       head: [['Date', 'Client', 'Place', 'Durée (min)', 'Montant', 'Mode de Paiement']],
       body: sessionData,
       theme: 'striped',
-      headStyles: { fillColor: [40, 40, 40] }
+      headStyles: { fillColor: darkColor }
     })
-
-    // Capture Chart
-    finalY = (doc as any).lastAutoTable.finalY || 100
-    try {
-      const chartElement = document.getElementById('report-chart-container')
-      if (chartElement) {
-        // Add new page if not enough space
-        if (finalY > doc.internal.pageSize.height - 100) {
-          doc.addPage()
-          finalY = 20
-        } else {
-          finalY += 20
-        }
-        
-        doc.setFontSize(14)
-        doc.text('Évolution des Revenus', 14, finalY)
-        
-        const canvas = await html2canvas(chartElement, { scale: 2, backgroundColor: '#080b12' })
-        const imgData = canvas.toDataURL('image/png')
-        
-        const imgWidth = doc.internal.pageSize.width - 28
-        const imgHeight = (canvas.height * imgWidth) / canvas.width
-        doc.addImage(imgData, 'PNG', 14, finalY + 10, imgWidth, imgHeight)
-      }
-    } catch (err) {
-      console.error('Error capturing chart', err)
-    }
 
     // Footer
     const pageCount = (doc as any).internal.getNumberOfPages()
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i)
-        doc.setFontSize(10)
+        doc.setFontSize(9)
+        doc.setTextColor(150)
         doc.text(
-            `Page ${i} - Généré par Nook OS`,
+            `Page ${i} sur ${pageCount} - Généré par Nook OS`,
             doc.internal.pageSize.width / 2,
             doc.internal.pageSize.height - 10,
             { align: 'center' }
@@ -382,137 +444,12 @@ export default function ReportsPage() {
           </motion.div>
         </div>
 
-        {/* Chart Section */}
-        <section className="space-y-4" id="report-chart-container">
-          <h3 className="text-[11px] font-black text-text3 uppercase tracking-[0.2em]">Évolution des Revenus</h3>
-          <div className="glass border-white/5 rounded-3xl p-4 h-[240px]">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#263548" vertical={false} />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#475569" 
-                    fontSize={10} 
-                    tickLine={false} 
-                    axisLine={false} 
-                  />
-                  <YAxis 
-                    stroke="#475569" 
-                    fontSize={10} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(val) => `${val}`}
-                  />
-                  <Tooltip 
-                    cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 2 }}
-                    contentStyle={{ backgroundColor: '#111827', borderColor: '#1f2d45', borderRadius: '12px' }}
-                    itemStyle={{ color: '#f97316', fontWeight: 'bold' }}
-                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#f97316" 
-                    strokeWidth={3} 
-                    dot={{ fill: '#080b12', stroke: '#f97316', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: '#ea6b0a', stroke: '#ffffff' }}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-text3 text-sm">
-                Aucune donnée disponible
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Category Breakdown */}
-        <section className="space-y-4">
-          <h3 className="text-[11px] font-black text-text3 uppercase tracking-[0.2em]">{t('reports.category_breakdown') || 'Par Catégorie'}</h3>
-          <div className="glass border-white/5 rounded-3xl p-6 space-y-6">
-            {[
-              { id: 'boisson', icon: Coffee, label: t('cat.boisson') || 'Boissons', color: '#0ea5e9' },
-              { id: 'nourriture', icon: Utensils, label: t('cat.nourriture') || 'Nourriture', color: '#f59e0b' },
-              { id: 'autre', icon: Package, label: t('cat.autre') || 'Autres', color: '#8b5cf6' },
-            ].map(cat => {
-              const amount = categoryRevenue[cat.id] || 0
-              const totalExtras = Object.values(categoryRevenue).reduce((sum, value) => sum + value, 0)
-              const percentage = totalExtras > 0 ? (amount / totalExtras) * 100 : 0
-              return (
-                <div key={cat.id} className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${cat.color}15` }}>
-                        <cat.icon size={16} style={{ color: cat.color }} />
-                      </div>
-                      <span className="text-xs font-bold text-text2 uppercase tracking-wide">{cat.label}</span>
-                    </div>
-                    <div className="text-sm font-mono font-extrabold text-text">
-                      {amount.toFixed(2)} <span className="text-[10px] opacity-60">DH</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percentage}%` }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: cat.color, boxShadow: `0 0 8px ${cat.color}80` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* Payment Breakdown */}
-        <section className="space-y-4">
-          <h3 className="text-[11px] font-black text-text3 uppercase tracking-[0.2em]">{t('reports.payment_breakdown')}</h3>
-          <div className="glass border-white/5 rounded-3xl p-6 space-y-6">
-            {[
-              { id: 'cash', icon: Banknote, label: t('sessions.cash'), color: '#f97316' },
-              { id: 'card', icon: CreditCard, label: t('sessions.card'), color: '#3b82f6' },
-              { id: 'account', icon: Wallet, label: t('sessions.account'), color: '#8b5cf6' },
-              { id: 'free', icon: Gift, label: t('sessions.free'), color: '#ef4444' },
-            ].map(method => {
-              const amount = stats.payments[method.id] || 0
-              const percentage = stats.revenue > 0 ? (amount / stats.revenue) * 100 : 0
-              return (
-                <div key={method.id} className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${method.color}15` }}>
-                        <method.icon size={16} style={{ color: method.color }} />
-                      </div>
-                      <span className="text-xs font-bold text-text2 uppercase tracking-wide">{method.label}</span>
-                    </div>
-                    <div className="text-sm font-mono font-extrabold text-text">
-                      {amount.toFixed(2)} <span className="text-[10px] opacity-60">DH</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percentage}%` }}
-                      className="h-full rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]"
-                      style={{ backgroundColor: method.color }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
         <button 
           onClick={generatePDF}
           className="w-full h-12 mt-6 rounded-xl bg-accent text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-accent/20"
         >
           <Download size={18} />
-          {t('reports.download') || 'Télécharger le PDF'}
+          Download Report
         </button>
       </main>
 

@@ -1,19 +1,22 @@
-import { LogOut, Settings, Users } from 'lucide-react'
+import { LogOut, Settings, Users, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useUIStore } from '../../stores/uiStore'
 import { supabase } from '../../lib/supabase'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { GlobalSearch } from './GlobalSearch'
-import { StaffPermissions } from '../../types'
+import { useEffect, useState } from 'react'
 
 export const TopBar = () => {
   const { type, staff, cafe, logout } = useAuthStore()
   const { logo } = useUIStore()
   const navigate = useNavigate()
+  const location = useLocation()
+  
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/'
 
-  const permissions = staff?.permissions as Partial<StaffPermissions> | undefined;
-  const hasSettings = type === 'owner' || !!permissions?.settings;
-  const hasClients = type === 'owner' || !!permissions?.clients;
+
+  const hasSettings = type === 'owner' || !!(staff?.permissions as any)?.settings;
+  const hasClients = type === 'owner' || !!(staff?.permissions as any)?.clients;
 
   const handleLogout = async () => {
     if (type === 'owner') {
@@ -28,15 +31,22 @@ export const TopBar = () => {
       {/* Background with backdrop-blur moved to an absolute child to prevent containing block issues for fixed children */}
       <div className="absolute inset-0 bg-bg/90 backdrop-blur-xl border-b border-border -z-10" />
       
-      <Link to="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-        {logo ? (
-           <img src={logo} alt={cafe?.name} className="w-8 h-8 object-contain rounded-md drop-shadow-sm bg-white/10 p-0.5" />
-        ) : (
-           <div className="w-8 h-8 bg-accent text-white rounded-xl flex items-center justify-center font-bold text-sm shadow-[0_2px_10px_rgba(249,115,22,0.3)]">
-             {cafe?.name?.charAt(0).toUpperCase() || 'N'}
-           </div>
+      <div className="flex items-center gap-3">
+        {!isDashboard && (
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text transition-colors">
+            <ChevronLeft size={20} />
+          </button>
         )}
-      </Link>
+        <Link to="/dashboard" className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${!isDashboard ? 'hidden sm:flex' : ''}`}>
+          {logo ? (
+             <img src={logo} alt={cafe?.name} className="w-8 h-8 object-contain rounded-md drop-shadow-sm bg-white/10 p-0.5" />
+          ) : (
+             <div className="w-8 h-8 bg-accent text-white rounded-xl flex items-center justify-center font-bold text-sm shadow-[0_2px_10px_rgba(249,115,22,0.3)]">
+               {cafe?.name?.charAt(0).toUpperCase() || 'N'}
+             </div>
+          )}
+        </Link>
+      </div>
 
       <div className="text-sm font-semibold text-text absolute left-1/2 -translate-x-1/2 max-w-[150px] sm:max-w-[200px] truncate text-center">
         {cafe?.name || 'Nook OS'}

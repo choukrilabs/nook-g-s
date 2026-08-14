@@ -30,12 +30,10 @@ export default function ClientsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showNewClient, setShowNewClient] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'positive' | 'low'>('all')
 
   // New client form
   const [newName, setNewName] = useState('')
   const [newPhone, setNewPhone] = useState('')
-  const [newBalance, setNewBalance] = useState(0)
   const [newNotes, setNewNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
@@ -86,7 +84,7 @@ export default function ClientsPage() {
           cafe_id: cafe.id,
           name: newName,
           phone: newPhone || null,
-          balance: newBalance,
+          balance: 0,
           notes: newNotes || null
         })
       
@@ -96,7 +94,6 @@ export default function ClientsPage() {
       setShowNewClient(false)
       setNewName('')
       setNewPhone('')
-      setNewBalance(0)
       setNewNotes('')
       loadClients()
     } catch (error: any) {
@@ -109,8 +106,6 @@ export default function ClientsPage() {
   const filteredClients = clients.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search))
     if (!matchesSearch) return false
-    if (filter === 'positive') return c.balance > 0
-    if (filter === 'low') return c.balance < 10
     return true
   })
 
@@ -129,27 +124,7 @@ export default function ClientsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {[
-            { id: 'all', label: t('common.all') },
-            { id: 'positive', label: 'Solde positif' },
-            { id: 'low', label: 'Faible solde' },
-          ].map(p => (
-            <button
-              key={p.id}
-              onClick={() => setFilter(p.id as any)}
-              className={`flex-shrink-0 px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${
-                filter === p.id 
-                  ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
-                  : 'bg-surface/50 text-text3 border-white/5 hover:border-white/10 glass'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
+        
         <div className="space-y-4">
           {isLoading && clients.length === 0 ? (
             Array.from({ length: 4 }).map((_, i) => (
@@ -181,9 +156,6 @@ export default function ClientsPage() {
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <Avatar name={client.name} size={48} />
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-bg border-4 border-bg flex items-center justify-center">
-                      <div className={`w-2 h-2 rounded-full ${client.balance > 0 ? 'bg-success' : 'bg-error'}`} />
-                    </div>
                   </div>
                   <div>
                     <div className="text-base font-bold text-text mb-0.5">{client.name}</div>
@@ -194,14 +166,6 @@ export default function ClientsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-right flex flex-col items-end gap-0.5">
-                    <div className={`text-sm font-mono font-extrabold ${
-                      client.balance > 50 ? 'text-success' : client.balance < 10 ? 'text-error' : 'text-accent'
-                    }`}>
-                      {client.balance.toFixed(2)} <span className="text-[10px] opacity-60">DH</span>
-                    </div>
-                    <div className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">{t('clients.balance')}</div>
-                  </div>
                   <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-text3 group-hover:text-text group-hover:bg-white/10 transition-all">
                     <ChevronRight size={18} />
                   </div>
@@ -243,16 +207,6 @@ export default function ClientsPage() {
             value={newPhone}
             onChange={(e) => setNewPhone(e.target.value)}
           />
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-text3 uppercase tracking-widest">Solde initial en DH</label>
-            <Input
-              type="number"
-              placeholder="0.00"
-              icon={<Wallet size={18} />}
-              value={newBalance || ''}
-              onChange={(e) => setNewBalance(parseFloat(e.target.value) || 0)}
-            />
-          </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-text3 uppercase tracking-widest">Notes</label>
             <textarea
