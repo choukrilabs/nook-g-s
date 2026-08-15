@@ -263,14 +263,14 @@ export default function SessionDetailPage() {
   return (
     <div className="min-h-screen bg-bg pb-32">
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text">
+        <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">Place {session.seat_number}</h1>
         <div className="relative">
           <button 
             onClick={() => setShowMoreMenu(!showMoreMenu)} 
-            className="p-2 -mr-2 text-text3 hover:text-text"
+            className="p-2 -me-2 text-text3 hover:text-text"
           >
             <MoreVertical size={20} />
           </button>
@@ -286,7 +286,7 @@ export default function SessionDetailPage() {
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl overflow-hidden shadow-xl shadow-black/50 z-[120]"
+                  className="absolute end-0 mt-2 w-48 bg-surface border border-border rounded-xl overflow-hidden shadow-xl shadow-black/50 z-[120]"
                 >
                   <div className="flex flex-col py-1">
                     {session.status === 'active' && (
@@ -295,7 +295,7 @@ export default function SessionDetailPage() {
                           setShowMoreMenu(false)
                           // TODO: implement edit name
                         }}
-                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-text2 hover:text-text hover:bg-surface2 transition-colors text-left"
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-text2 hover:text-text hover:bg-surface2 transition-colors text-start"
                       >
                         <Edit2 size={16} />
                         Modifier le nom
@@ -307,7 +307,7 @@ export default function SessionDetailPage() {
                           setShowMoreMenu(false)
                           setShowCancel(true)
                         }}
-                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-error hover:bg-error/10 transition-colors text-left"
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-error hover:bg-error/10 transition-colors text-start"
                       >
                         <Trash2 size={16} />
                         Annuler la session
@@ -328,7 +328,7 @@ export default function SessionDetailPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="p-8 rounded-3xl border border-accent/20 bg-linear-to-br from-accent/10 via-surface to-transparent flex flex-col items-center text-center relative overflow-hidden shadow-2xl shadow-accent/10"
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-accent to-transparent opacity-50" />
+          <div className="absolute top-0 start-0 w-full h-1 bg-linear-to-r from-transparent via-accent to-transparent opacity-50" />
           
           <div className="text-xs font-bold text-accent uppercase tracking-widest mb-1">{session.customer_name}</div>
           {session.customer_phone && (
@@ -406,8 +406,8 @@ export default function SessionDetailPage() {
                </div>
                
                {/* Semi-circle cutouts for the ticket effect */}
-               <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-bg rounded-full border-r border-t border-gray-100"></div>
-               <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-bg rounded-full border-l border-t border-gray-100"></div>
+               <div className="absolute -bottom-3 -start-3 w-6 h-6 bg-bg rounded-full border-r border-t border-gray-100"></div>
+               <div className="absolute -bottom-3 -end-3 w-6 h-6 bg-bg rounded-full border-l border-t border-gray-100"></div>
             </div>
 
             {/* Bill Lines Area */}
@@ -444,7 +444,7 @@ export default function SessionDetailPage() {
                         {type === 'owner' && session.status === 'active' && (
                           <button 
                             onClick={() => setItemToRemove(i)}
-                            className="w-6 h-6 bg-red-100 text-red-500 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors opacity-0 group-hover:opacity-100 absolute -right-2"
+                            className="w-6 h-6 bg-red-100 text-red-500 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors opacity-0 group-hover:opacity-100 absolute -end-2"
                           >
                             <Trash2 size={12} />
                           </button>

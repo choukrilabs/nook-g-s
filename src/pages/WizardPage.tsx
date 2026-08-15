@@ -262,7 +262,7 @@ export default function WizardPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-text2">{t('staff.pin_setup')}</label>
                   <div className="relative w-full">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-text3">
+                    <div className="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none text-text3">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
@@ -276,7 +276,7 @@ export default function WizardPage() {
                         setStaffPin(val)
                       }}
                       placeholder={t('auth.password')}
-                      className="input pl-11"
+                      className="input ps-11"
                     />
                   </div>
                 </div>
@@ -318,7 +318,7 @@ export default function WizardPage() {
             <div className="bg-surface2 border border-border rounded-2xl p-6 space-y-4">
               <p className="text-xs font-semibold text-text3 uppercase tracking-wider">Code d'invitation de votre café</p>
               <div className="bg-black/25 border border-border rounded-xl p-4 flex items-center justify-center gap-4 group">
-                <span className="text-3xl font-mono font-bold text-text tracking-[0.3em] pl-[0.3em]">
+                <span className="text-3xl font-mono font-bold text-text tracking-[0.3em] ps-[0.3em]">
                   {inviteCode}
                 </span>
                 <button 

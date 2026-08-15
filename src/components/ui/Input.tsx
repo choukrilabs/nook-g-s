@@ -17,7 +17,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="relative w-full">
         {icon && (
-          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text3">
+          <div className="absolute start-3.5 top-1/2 -translate-y-1/2 text-text3">
             {icon}
           </div>
         )}
@@ -25,14 +25,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           className={cn(
             'input',
-            icon && 'pl-11',
-            rightElement && 'pr-11',
+            icon && 'ps-11',
+            rightElement && 'pe-11',
             className
           )}
           {...props}
         />
         {rightElement && (
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+          <div className="absolute end-3.5 top-1/2 -translate-y-1/2">
             {rightElement}
           </div>
         )}

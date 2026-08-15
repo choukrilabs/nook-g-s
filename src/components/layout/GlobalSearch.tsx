@@ -92,14 +92,14 @@ export const GlobalSearch = () => {
             >
               <div className="p-4 border-b border-border flex items-center gap-3">
                 <div className="flex-1 relative">
-                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text3" />
+                  <Search size={18} className="absolute start-3 top-1/2 -translate-y-1/2 text-text3" />
                   <input
                     ref={inputRef}
                     type="text"
                     placeholder={t('common.search') + "..."}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="w-full h-12 bg-surface border border-border rounded-xl pl-10 pr-4 text-text placeholder:text-text3 focus:border-accent focus:outline-none"
+                    className="w-full h-12 bg-surface border border-border rounded-xl ps-10 pe-4 text-text placeholder:text-text3 focus:border-accent focus:outline-none"
                   />
                 </div>
                 <button 

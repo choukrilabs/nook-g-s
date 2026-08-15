@@ -173,7 +173,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="p-4 glass rounded-2xl flex items-center gap-4 text-error border-error/30 shadow-2xl shadow-error/10 relative overflow-hidden group"
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-error/50" />
+            <div className="absolute top-0 start-0 w-1 h-full bg-error/50" />
             <div className="w-12 h-12 bg-error/10 rounded-2xl flex items-center justify-center shrink-0 border border-error/20 group-hover:bg-error/20 transition-colors">
               <AlertTriangle size={24} className="animate-pulse" />
             </div>
@@ -195,8 +195,8 @@ export default function DashboardPage() {
           className="relative p-8 rounded-[32px] border border-white/5 bg-bg2 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] overflow-hidden"
         >
           {/* Advanced Mesh Background */}
-          <div className="absolute top-[-20%] right-[-10%] w-[300px] h-[300px] bg-accent/20 rounded-full blur-[120px] mix-blend-screen animate-pulse pointer-events-none" />
-          <div className="absolute bottom-[-10%] left-[-5%] w-[200px] h-[200px] bg-accent/10 rounded-full blur-[100px] mix-blend-overlay pointer-events-none" />
+          <div className="absolute top-[-20%] end-[-10%] w-[300px] h-[300px] bg-accent/20 rounded-full blur-[120px] mix-blend-screen animate-pulse pointer-events-none" />
+          <div className="absolute bottom-[-10%] start-[-5%] w-[200px] h-[200px] bg-accent/10 rounded-full blur-[100px] mix-blend-overlay pointer-events-none" />
 
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-8">
@@ -286,7 +286,7 @@ export default function DashboardPage() {
               </span>
               <Link
                 to="/seats"
-                className="text-[11px] font-bold text-text ml-auto bg-surface2 hover:bg-surface border border-border/50 rounded-full px-3 py-1.5 transition-all active:scale-95 flex items-center gap-1 shadow-sm"
+                className="text-[11px] font-bold text-text ms-auto bg-surface2 hover:bg-surface border border-border/50 rounded-full px-3 py-1.5 transition-all active:scale-95 flex items-center gap-1 shadow-sm"
               >
                 {cafe ? cafe.total_seats - activeSessions.length : 0} /{" "}
                 {cafe?.total_seats || 0} places
@@ -322,7 +322,7 @@ export default function DashboardPage() {
                 className="relative z-10 px-8 rounded-2xl h-12"
                 onClick={() => navigate("/sessions/new")}
               >
-                <PlusCircle size={18} className="mr-2" />
+                <PlusCircle size={18} className="me-2" />
                 {t("dashboard.start_session")}
               </Button>
             </motion.div>
@@ -369,7 +369,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1.5">
+                  <div className="text-end flex flex-col items-end gap-1.5">
                     <div className="text-sm font-mono font-extrabold text-accent">
                       {session.total_amount.toFixed(2)}{" "}
                       <span className="text-[10px] opacity-60">DH</span>
@@ -385,7 +385,7 @@ export default function DashboardPage() {
       {/* Floating Action Button Instead of BottomNav */}
       <button
         onClick={() => navigate("/sessions/new")}
-        className="fixed bottom-[24px] right-6 w-14 h-14 bg-gradient-to-br from-accent to-accent2 hover:opacity-90 text-white rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(249,115,22,0.4)] z-50 transition-transform active:scale-90"
+        className="fixed bottom-[24px] end-6 w-14 h-14 bg-gradient-to-br from-accent to-accent2 hover:opacity-90 text-white rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(249,115,22,0.4)] z-50 transition-transform active:scale-90"
       >
         <Plus size={28} />
       </button>

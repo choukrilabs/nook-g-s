@@ -26,7 +26,7 @@ export default function SeatsPage() {
   return (
     <div className="min-h-screen bg-bg pb-24">
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text">
+        <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">État des places</h1>

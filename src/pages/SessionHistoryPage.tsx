@@ -274,7 +274,7 @@ export default function SessionHistoryPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="text-right">
+                      <div className="text-end">
                         <div className="text-sm font-mono font-bold text-text">
                           {session.total_amount ? session.total_amount.toFixed(2) : '0.00'} DH
                         </div>

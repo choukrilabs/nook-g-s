@@ -67,7 +67,7 @@ export const SessionCard = ({ session, onEnd }: SessionCardProps) => {
       {isLong && (
         <>
           <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-error/60 via-error to-error/60 animate-pulse" />
-          <div className="absolute -right-8 -top-8 w-32 h-32 bg-error/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -end-8 -top-8 w-32 h-32 bg-error/10 rounded-full blur-3xl animate-pulse" />
         </>
       )}
 

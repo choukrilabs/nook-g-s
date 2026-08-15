@@ -33,7 +33,7 @@ export const TopBar = () => {
       
       <div className="flex items-center gap-3">
         {!isDashboard && (
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text transition-colors">
             <ChevronLeft size={20} />
           </button>
         )}
@@ -58,14 +58,14 @@ export const TopBar = () => {
         {hasSettings ? (
           <button 
             onClick={() => navigate('/settings')}
-            className="w-8 h-8 ml-2 flex items-center justify-center rounded-full bg-surface2 text-text2 hover:text-text transition-colors"
+            className="w-8 h-8 ms-2 flex items-center justify-center rounded-full bg-surface2 text-text2 hover:text-text transition-colors"
           >
             <Settings size={18} />
           </button>
         ) : hasClients ? (
           <button 
             onClick={() => navigate('/clients')}
-            className="w-8 h-8 ml-2 flex items-center justify-center rounded-full bg-surface2 text-text2 hover:text-text transition-colors"
+            className="w-8 h-8 ms-2 flex items-center justify-center rounded-full bg-surface2 text-text2 hover:text-text transition-colors"
           >
             <Users size={18} />
           </button>
@@ -74,7 +74,7 @@ export const TopBar = () => {
         {type === 'staff' && (
           <button 
             onClick={handleLogout}
-            className="p-2 ml-1 text-text3 hover:text-error transition-colors"
+            className="p-2 ms-1 text-text3 hover:text-error transition-colors"
           >
             <LogOut size={18} />
           </button>

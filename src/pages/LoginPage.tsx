@@ -514,7 +514,7 @@ export default function LoginPage() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setStaffStep(1)}
-                      className="p-2 -ml-2 text-text3 hover:text-text"
+                      className="p-2 -ms-2 text-text3 hover:text-text"
                     >
                       <ArrowLeft size={18} />
                     </button>
@@ -530,7 +530,7 @@ export default function LoginPage() {
                       </label>
                       <div className="relative">
                         <select
-                          className="input pl-11 appearance-none"
+                          className="input ps-11 appearance-none"
                           value={selectedStaff?.id || ""}
                           onChange={(e) =>
                             setSelectedStaff(
@@ -549,7 +549,7 @@ export default function LoginPage() {
                           ))}
                         </select>
                         <Users
-                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text3"
+                          className="absolute start-3.5 top-1/2 -translate-y-1/2 text-text3"
                           size={16}
                         />
                       </div>
@@ -560,7 +560,7 @@ export default function LoginPage() {
                         {t("auth.password")}
                       </label>
                       <div className="relative w-full">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-text3">
+                        <div className="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none text-text3">
                           <Lock className="w-4 h-4" />
                         </div>
                         <input
@@ -575,7 +575,7 @@ export default function LoginPage() {
                             if (val.length === 4) handleStaffLogin(val);
                           }}
                           placeholder={t("auth.password")}
-                          className={`input pl-11 ${
+                          className={`input ps-11 ${
                             pinError
                               ? "border-error text-error focus:border-error focus:shadow-[0_0_0_3px_rgba(239,68,68,0.08)]"
                               : ""

@@ -186,7 +186,7 @@ export default function ClientsPage() {
 
       <button
         onClick={() => setShowNewClient(true)}
-        className="fixed bottom-[24px] right-6 w-14 h-14 bg-linear-to-br from-accent to-[#ea6b0a] rounded-full flex items-center justify-center text-white shadow-2xl shadow-accent/40 z-50 active:scale-90 transition-all"
+        className="fixed bottom-[24px] end-6 w-14 h-14 bg-linear-to-br from-accent to-[#ea6b0a] rounded-full flex items-center justify-center text-white shadow-2xl shadow-accent/40 z-50 active:scale-90 transition-all"
       >
         <UserPlus size={24} />
       </button>

@@ -87,14 +87,14 @@ export default function ClientDetailPage() {
   return (
     <div className="min-h-screen bg-bg pb-12">
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text">
+        <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">{client.name}</h1>
         <div className="relative">
           <button 
             onClick={() => setShowMoreMenu(!showMoreMenu)} 
-            className="p-2 -mr-2 text-text3 hover:text-text"
+            className="p-2 -me-2 text-text3 hover:text-text"
           >
             <MoreVertical size={20} />
           </button>
@@ -110,7 +110,7 @@ export default function ClientDetailPage() {
                   initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl overflow-hidden shadow-xl shadow-black/50 z-[120]"
+                  className="absolute end-0 mt-2 w-48 bg-surface border border-border rounded-xl overflow-hidden shadow-xl shadow-black/50 z-[120]"
                 >
                   <div className="flex flex-col py-1">
                     <button 
@@ -118,7 +118,7 @@ export default function ClientDetailPage() {
                         setShowMoreMenu(false)
                         // TODO: implement edit client
                       }}
-                      className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-text2 hover:text-text hover:bg-surface2 transition-colors text-left"
+                      className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-text2 hover:text-text hover:bg-surface2 transition-colors text-start"
                     >
                       <PlusCircle size={16} /> {/* Should be edit, but reusing for now or change to Edit2 */}
                       Modifier le profil
@@ -129,7 +129,7 @@ export default function ClientDetailPage() {
                           setShowMoreMenu(false)
                           // TODO: confirm delete
                         }}
-                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-error hover:bg-error/10 transition-colors text-left"
+                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-error hover:bg-error/10 transition-colors text-start"
                       >
                         <Trash2 size={16} /> {/* Wait, Trash2 needs importing if not present */}
                         Supprimer le client
@@ -241,7 +241,7 @@ export default function ClientDetailPage() {
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <div className="text-sm font-mono font-bold text-text">
                     {session.total_amount.toFixed(2)} DH
                   </div>

@@ -184,7 +184,7 @@ export default function SettingsPage() {
                       size="sm"
                       onClick={handleRemoveLogo}
                     >
-                      <Trash2 size={14} className="mr-2" /> Supprimer
+                      <Trash2 size={14} className="me-2" /> Supprimer
                     </Button>
                   </div>
                 </>
@@ -379,7 +379,7 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="glass border-white/5 rounded-3xl p-6 flex flex-col gap-5 mb-8 relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 end-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
 
           {/* Cafe Info */}
           <div className="flex items-center gap-5 pb-5 border-b border-white/5 relative z-10">

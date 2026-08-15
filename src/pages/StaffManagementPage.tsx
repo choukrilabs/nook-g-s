@@ -250,7 +250,7 @@ export default function StaffManagementPage() {
     <div className="min-h-screen bg-bg pb-12">
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text">
+          <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
             <ChevronLeft size={20} />
           </button>
           <h1 className="text-sm font-bold text-text">{t('staff.title')}</h1>
@@ -286,7 +286,7 @@ export default function StaffManagementPage() {
               <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full" />
             )}
           </button>
-          <button onClick={() => setShowAdd(true)} className="p-2 -mr-2 text-accent hover:text-accent2">
+          <button onClick={() => setShowAdd(true)} className="p-2 -me-2 text-accent hover:text-accent2">
             <Plus size={20} />
           </button>
         </div>
@@ -482,7 +482,7 @@ export default function StaffManagementPage() {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isActive ? 'bg-success text-white' : 'bg-border text-text3'}`}>
                   <Check size={16} />
                 </div>
-                <div className="text-left">
+                <div className="text-start">
                   <div className="text-sm font-bold text-text">{isActive ? t('staff.account_active') : t('staff.account_inactive')}</div>
                   <div className="text-[10px] text-text3">{isActive ? t('staff.can_login') : t('staff.cannot_login')}</div>
                 </div>
@@ -515,7 +515,7 @@ export default function StaffManagementPage() {
                 >
                   <div className="flex items-center gap-3">
                     <perm.icon size={18} className={permissions[perm.id as keyof typeof permissions] ? 'text-accent' : 'text-text3'} />
-                    <div className="text-left">
+                    <div className="text-start">
                       <div className="text-sm font-bold text-text">{perm.label}</div>
                       {perm.locked && <div className="text-[10px] text-text3 italic">{t('staff.always_on')}</div>}
                     </div>

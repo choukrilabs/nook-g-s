@@ -191,11 +191,11 @@ export default function ProductManagementPage() {
   return (
     <div className="min-h-screen bg-bg pb-12">
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text">
+        <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-sm font-bold text-text">{t('settings.product_catalog')}</h1>
-        <button onClick={openAdd} className="p-2 -mr-2 text-accent hover:text-accent2">
+        <button onClick={openAdd} className="p-2 -me-2 text-accent hover:text-accent2">
           <Plus size={20} />
         </button>
       </header>

@@ -311,7 +311,7 @@ export default function NewSessionPage() {
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
         <button
           onClick={() => setSessionMode(null)}
-          className="p-2 -ml-2 text-text3 hover:text-text"
+          className="p-2 -ms-2 text-text3 hover:text-text"
         >
           <ChevronLeft size={20} />
         </button>
@@ -391,7 +391,7 @@ export default function NewSessionPage() {
                         >
                           <UserPlus size={18} />
                         </div>
-                        <div className="text-left">
+                        <div className="text-start">
                           <div className="text-sm font-bold text-text">
                             Nouveau compte client
                           </div>
@@ -581,7 +581,7 @@ export default function NewSessionPage() {
                   {customerName} — Place {selectedSeat}
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-end">
                 <div className="text-xs font-bold text-accent2">
                   {cafe?.default_rate} DH/h
                 </div>

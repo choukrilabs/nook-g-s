@@ -76,10 +76,10 @@ export default function AuditLogPage() {
   return (
     <div className="min-h-screen bg-bg pb-12">
       <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center px-4">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text3 hover:text-text">
+        <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-sm font-bold text-text ml-2">{t('settings.audit_log')}</h1>
+        <h1 className="text-sm font-bold text-text ms-2">{t('settings.audit_log')}</h1>
       </header>
 
       <main className="pt-20 px-4 space-y-4">

@@ -37,7 +37,7 @@ export const Toast = ({ toast }: { toast: ToastType }) => {
       )}
     >
       <div className="flex-shrink-0">{icons[toast.type]}</div>
-      <p className="flex-grow text-sm font-medium text-text pr-2">{toast.message}</p>
+      <p className="flex-grow text-sm font-medium text-text pe-2">{toast.message}</p>
       <button
         onClick={() => removeToast(toast.id)}
         className="flex-shrink-0 text-text3 hover:text-text transition-colors"
