@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  Store,
-  Users,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowLeft,
-  Loader2,
-} from "lucide-react";
+import { Store, Users, Mail, Lock, Eye, EyeOff, ArrowLeft, Loader as Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore";
 import { useUIStore } from "../stores/uiStore";

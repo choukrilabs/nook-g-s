@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  ChevronLeft, Plus, ShoppingBag, Trash2, 
-  Loader2, Check, Search, Tag, DollarSign,
-  Coffee, Pizza, MoreHorizontal, Power, Edit2
-} from 'lucide-react'
+import { ChevronLeft, Plus, ShoppingBag, Trash2, Loader as Loader2, Check, Search, Tag, DollarSign, Coffee, Pizza, MoveHorizontal as MoreHorizontal, Power, CreditCard as Edit2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'

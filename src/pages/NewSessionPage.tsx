@@ -1,22 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  X,
-  User,
-  Phone,
-  Armchair,
-  Clock as ClockIcon,
-  Zap,
-  Sliders,
-  Play,
-  Loader2,
-  MessageSquare,
-  ChevronDown,
-  UserPlus,
-  ChevronLeft,
-  ShoppingBag,
-} from "lucide-react";
+import { X, User, Phone, Armchair, Clock as ClockIcon, Zap, FileSliders as Sliders, Play, Loader as Loader2, MessageSquare, ChevronDown, UserPlus, ChevronLeft, ShoppingBag } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore";
 import { useSessionStore } from "../stores/sessionStore";

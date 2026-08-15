@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { CircleCheck as CheckCircle, Circle as XCircle, TriangleAlert as AlertTriangle, Info, X } from 'lucide-react'
 import { useUIStore, Toast as ToastType } from '../../stores/uiStore'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'

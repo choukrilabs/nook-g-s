@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  ChevronLeft, MoreVertical, Phone, MessageCircle, 
-  PlusCircle, BarChart, TrendingUp, Calendar, 
-  Clock as ClockIcon, Banknote, Wallet, Loader2, Play, Trash2, Edit2
-} from 'lucide-react'
+import { ChevronLeft, MoveVertical as MoreVertical, Phone, MessageCircle, CirclePlus as PlusCircle, ChartBar as BarChart, TrendingUp, Calendar, Clock as ClockIcon, Banknote, Wallet, Loader as Loader2, Play, Trash2, CreditCard as Edit2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/offlineDB'
 import { useAuthStore } from '../stores/authStore'

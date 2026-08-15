@@ -2,10 +2,7 @@ import * as React from 'react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  Search, UserPlus, Wallet, Phone, FileText, 
-  ChevronRight, Plus, Loader2, User, Clock as ClockIcon
-} from 'lucide-react'
+import { Search, UserPlus, Wallet, Phone, FileText, ChevronRight, Plus, Loader as Loader2, User, Clock as ClockIcon } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'

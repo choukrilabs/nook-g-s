@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  ChevronLeft, Search, Filter, Banknote, CreditCard, 
-  Wallet, Gift, Clock as ClockIcon, Calendar, ChevronRight, Check
-} from 'lucide-react'
+import { ChevronLeft, Search, ListFilter as Filter, Banknote, CreditCard, Wallet, Gift, Clock as ClockIcon, Calendar, ChevronRight, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/offlineDB'
 import { useAuthStore } from '../stores/authStore'

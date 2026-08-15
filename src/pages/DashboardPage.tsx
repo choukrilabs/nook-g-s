@@ -1,27 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  PlusCircle,
-  Plus,
-  List,
-  Users,
-  BarChart2,
-  Zap,
-  Clock as ClockIcon,
-  RefreshCw,
-  Activity,
-  CheckCircle,
-  AlertTriangle,
-  Banknote,
-  CreditCard,
-  Gift,
-  Wallet,
-  ChevronRight,
-  Loader2,
-  TrendingUp,
-  ArrowUpRight,
-} from "lucide-react";
+import { CirclePlus as PlusCircle, Plus, List, Users, ChartBar as BarChart2, Zap, Clock as ClockIcon, RefreshCw, Activity, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Banknote, CreditCard, Gift, Wallet, ChevronRight, Loader as Loader2, TrendingUp, ArrowUpRight } from "lucide-react";
 import { TopBar } from "../components/layout/TopBar";
 import { SessionCard } from "../components/sessions/SessionCard";
 import { Button } from "../components/ui/Button";

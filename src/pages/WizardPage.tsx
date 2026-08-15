@@ -1,10 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  Store, MapPin, Navigation, Phone, Armchair, Clock as ClockIcon, Star, Timer, 
-  User, CheckCircle, ArrowRight, Copy, Check, Loader2, Sliders, Lock
-} from 'lucide-react'
+import { Store, MapPin, Navigation, Phone, Armchair, Clock as ClockIcon, Star, Timer, User, CircleCheck as CheckCircle, ArrowRight, Copy, Check, Loader as Loader2, FileSliders as Sliders, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'

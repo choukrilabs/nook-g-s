@@ -1,24 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  Store,
-  DollarSign,
-  Bell,
-  ShoppingBag,
-  Users,
-  Key,
-  Globe,
-  User,
-  LogOut,
-  ChevronDown,
-  ChevronRight,
-  Copy,
-  RefreshCw,
-  Check,
-  BarChart2,
-  Trash2,
-} from "lucide-react";
+import { Store, DollarSign, Bell, ShoppingBag, Users, Key, Globe, User, LogOut, ChevronDown, ChevronRight, Copy, RefreshCw, Check, ChartBar as BarChart2, Trash2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore";
 import { useUIStore } from "../stores/uiStore";

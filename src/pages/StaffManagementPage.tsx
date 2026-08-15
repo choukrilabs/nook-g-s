@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  ChevronLeft, Plus, User, Key, Timer, 
-  BarChart2, Users, Settings, Trash2, Loader2, Check,
-  Search, Filter, Power, DollarSign, Lock, MessageCircle, Phone
-} from 'lucide-react'
+import { ChevronLeft, Plus, User, Key, Timer, ChartBar as BarChart2, Users, Settings, Trash2, Loader as Loader2, Check, Search, ListFilter as Filter, Power, DollarSign, Lock, MessageCircle, Phone } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
