@@ -11,10 +11,10 @@ import { supabase } from "./lib/supabase";
 import { useAuthStore } from "./stores/authStore";
 import { useSessionStore } from "./stores/sessionStore";
 import { useUIStore } from "./stores/uiStore";
-import { processSyncQueue } from "./lib/offlineSync";
 import { Loader2 } from "lucide-react";
 import { ToastContainer } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 
 // Pages (to be created)
 import WelcomePage from "./pages/WelcomePage";
@@ -106,15 +106,15 @@ function AppRoutes() {
       setLoading(true);
 
       let session = null;
-      let sessionError = null;
+      let sessionError: Error | { message?: string } | null = null;
       try {
         // 1. Check Supabase Auth (Owner)
         const { data, error } = await supabase.auth.getSession();
         session = data.session;
         sessionError = error;
-      } catch (e) {
+      } catch (e: any) {
         console.warn("Failed to get session online, checking cached state", e);
-        sessionError = e;
+        sessionError = e instanceof Error ? e : { message: String(e) };
       }
 
       // Add minimum loading time for the splash screen effect
@@ -204,7 +204,7 @@ function AppRoutes() {
       setLoading(false);
 
       if (navigator.onLine) {
-        processSyncQueue();
+        
       }
     };
 
@@ -224,8 +224,9 @@ function AppRoutes() {
   }, []);
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location}>
+    <ErrorBoundary key={location.pathname}>
+      <AnimatePresence mode="wait">
+        <Routes location={location}>
         <Route
           path="/login"
           element={
@@ -406,17 +407,20 @@ function AppRoutes() {
         />
       </Routes>
     </AnimatePresence>
+    </ErrorBoundary>
   );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-bg text-text selection:bg-accent/30">
-        <OfflineBanner />
-        <AppRoutes />
-        <ToastContainer />
-      </div>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-bg text-text selection:bg-accent/30">
+          <OfflineBanner />
+          <AppRoutes />
+          <ToastContainer />
+        </div>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

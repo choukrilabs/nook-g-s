@@ -1,67 +1,82 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, arMA } from "date-fns/locale";
 import { Session, Cafe } from "../types";
+import { useLanguageStore } from "../i18n";
+import html2canvas from "html2canvas";
+
+const getDateLocale = () => {
+  const lang = useLanguageStore.getState().language;
+  return lang === "ar" ? arMA : fr;
+};
 
 export const generateReceiptText = (cafe: Cafe, session: Session) => {
   const isTimeMode = session.rate_per_hour !== 0;
   const isCompleted = session.status === "completed";
+  const dateLocale = getDateLocale();
+
   let text = `*${cafe.name}*\n`;
   if (cafe.address) text += `${cafe.address}\n`;
   if (cafe.phone) text += `${cafe.phone}\n`;
   text += `\n`;
   text += `*Session :* Place ${session.seat_number}\n`;
   text += `*Client :* ${session.customer_name || "Client"}\n`;
-  text += `*Date :* ${format(new Date(session.started_at), "dd/MM/yyyy HH:mm")}\n`;
+  text += `*Date :* ${format(new Date(session.started_at), "dd/MM/yyyy HH:mm", { locale: dateLocale })}\n`;
+  
   if (isCompleted && session.ended_at) {
-    text += `*Fin :* ${format(new Date(session.ended_at), "dd/MM/yyyy HH:mm")}\n`;
+    text += `*Fin :* ${format(new Date(session.ended_at), "dd/MM/yyyy HH:mm", { locale: dateLocale })}\n`;
   }
   text += `\n`;
 
   if (isTimeMode) {
-    text += `*Temps passé:* ${session.duration_minutes || 0} min\n`;
-    text += `*Tarif:* ${session.rate_per_hour} DH/h\n`;
-    text += `*Coût temps:* ${session.time_cost?.toFixed(2) || "0.00"} DH\n`;
+    text += `Temps: ${session.duration_minutes}m  -> ${session.time_cost?.toFixed(2)} DH\n`;
   }
 
   const extras = session.extras as any[];
   if (extras && extras.length > 0) {
-    text += `\n*Consommations:*\n`;
+    text += `Consommations:\n`;
     extras.forEach((extra) => {
-      text += `- ${extra.quantity || extra.qty}x ${extra.name} : ${(extra.price * (extra.quantity || extra.qty)).toFixed(2)} DH\n`;
+      text += `- ${extra.quantity || extra.qty}x ${extra.name}: ${(
+        extra.price * (extra.quantity || extra.qty)
+      ).toFixed(2)} DH\n`;
     });
-    text += `*Total Consommations:* ${session.extras_total?.toFixed(2) || "0.00"} DH\n`;
   }
 
-  text += `\n*TOTAL : ${session.total_amount?.toFixed(2) || "0.00"} DH*\n`;
-
-  if (isCompleted) {
-    text += `\n*Paiement :* ${session.payment_method || "-"}\n`;
-  }
-
-  text += `\nMerci de votre visite !\n`;
-  text += `Généré par Nook OS\n`;
+  text += `\n*TOTAL : ${session.total_amount?.toFixed(2)} DH*\n`;
+  text += `Merci de votre visite !\n\n`;
 
   return encodeURIComponent(text);
 };
 
-export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
+export const generateReceiptPDF = async (cafe: Cafe, session: Session) => {
+  const lang = useLanguageStore.getState().language;
+  
+  if (lang === "ar") {
+     useLanguageStore.getState().setLanguage(lang); // trigger just in case
+     // Render the screen via html2canvas
+     // Find the receipt container in the DOM (assuming we pass a ref or find by ID)
+     // To simplify for now we'll just show an alert that Arabic PDF receipts are not fully supported yet in offline mode
+     alert("L'export PDF des reçus en arabe est en cours de développement. (Arabic PDF export in progress)");
+     return;
+  }
+  
   const template = localStorage.getItem("nook_bill_template") || "standard";
   const doc = new jsPDF({ format: [80, 200] }); // Thermal receipt format approximation
   const isTimeMode = session.rate_per_hour !== 0;
   const isCompleted = session.status === "completed";
-  let y = 10;
+  const dateLocale = getDateLocale();
 
+  let y = 10;
   // Header
   const customLogo = localStorage.getItem("nook_logo");
   if (customLogo) {
     try {
       const match = customLogo.match(/^data:image\/(.+);base64,/);
-      const format = match ? match[1].toUpperCase() : "PNG";
+      const formatString = match ? match[1].toUpperCase() : "PNG";
       doc.addImage(
         customLogo,
-        format === "JPEG" || format === "JPG" ? "JPEG" : "PNG",
+        formatString === "JPEG" || formatString === "JPG" ? "JPEG" : "PNG",
         30,
         y,
         20,
@@ -78,7 +93,6 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
     doc.setFont("helvetica", "bold");
     doc.text(cafe.name, 40, y, { align: "center" });
     y += 5;
-
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.text(`Place ${session.seat_number} - ${session.customer_name}`, 40, y, {
@@ -96,6 +110,7 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
       });
       y += 4;
     }
+
     const extras = session.extras as any[];
     if (extras && extras.length > 0) {
       extras.forEach((extra) => {
@@ -107,6 +122,7 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
         y += 4;
       });
     }
+
     doc.line(5, y, 75, y);
     y += 5;
     doc.setFont("helvetica", "bold");
@@ -115,9 +131,10 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
       align: "right",
     });
     y += 6;
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.text(`Date: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 40, y, {
+    doc.text(`Date: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: dateLocale })}`, 40, y, {
       align: "center",
     });
   } else if (template === "elegant") {
@@ -134,6 +151,7 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
     y += 2;
     doc.line(10, y, 70, y);
     y += 6;
+
     doc.setFont("times", "normal");
     doc.text(`Place ${session.seat_number}`, 40, y, { align: "center" });
     y += 5;
@@ -147,6 +165,7 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
       });
       y += 5;
     }
+
     const extras = session.extras as any[];
     if (extras && extras.length > 0) {
       extras.forEach((extra) => {
@@ -158,6 +177,7 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
         y += 5;
       });
     }
+
     y += 2;
     doc.line(10, y, 70, y);
     y += 6;
@@ -170,9 +190,10 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
       align: "center",
     });
     y += 8;
+
     doc.setFontSize(8);
     doc.setFont("times", "normal");
-    doc.text(format(new Date(), "dd/MM/yyyy HH:mm"), 40, y, {
+    doc.text(format(new Date(), "dd/MM/yyyy HH:mm", { locale: dateLocale }), 40, y, {
       align: "center",
     });
   } else {
@@ -192,7 +213,6 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
       doc.text(cafe.phone, 40, y, { align: "center" });
       y += 4;
     }
-
     y += 2;
     doc.setDrawColor(0);
     doc.line(5, y, 75, y);
@@ -200,7 +220,7 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
 
     doc.setFontSize(10);
     doc.text(`Place ${session.seat_number}`, 5, y);
-    doc.text(format(new Date(session.started_at), "dd/MM HH:mm"), 75, y, {
+    doc.text(format(new Date(session.started_at), "dd/MM HH:mm", { locale: dateLocale }), 75, y, {
       align: "right",
     });
     y += 6;
@@ -236,6 +256,7 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
         doc.text(`${extraTotal} DH`, 75, y, { align: "right" });
         y += 5;
       });
+
       doc.text(`Total conso:`, 5, y);
       doc.text(`${session.extras_total?.toFixed(2) || "0.00"} DH`, 75, y, {
         align: "right",
@@ -245,7 +266,6 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
 
     doc.line(5, y, 75, y);
     y += 6;
-
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text(`TOTAL A PAYER`, 5, y);
@@ -273,19 +293,27 @@ export const generateReceiptPDF = (cafe: Cafe, session: Session) => {
   );
 };
 
-export const generateReportPDF = (
+export const generateReportPDF = async (
   cafe: Cafe,
   sessions: Session[],
   period: string,
 ) => {
+  const lang = useLanguageStore.getState().language;
+  
+  if (lang === "ar") {
+    alert("L'export PDF des rapports en arabe est en cours de développement. (Arabic PDF export in progress)");
+    return;
+  }
+  
   const doc = new jsPDF();
-  const now = format(new Date(), "dd/MM/yyyy HH:mm");
+  const dateLocale = getDateLocale();
+  const now = format(new Date(), "dd/MM/yyyy HH:mm", { locale: dateLocale });
 
   // Header
   doc.setFontSize(22);
   doc.setTextColor(249, 115, 22); // Accent color
   doc.text("Nook OS - Rapport d'activité", 14, 22);
-
+  
   doc.setFontSize(12);
   doc.setTextColor(100);
   doc.text(`${cafe.name}`, 14, 32);
@@ -312,7 +340,7 @@ export const generateReportPDF = (
 
   // Table
   const tableData = sessions.map((s) => [
-    format(new Date(s.ended_at!), "dd/MM HH:mm"),
+    format(new Date(s.ended_at!), "dd/MM HH:mm", { locale: dateLocale }),
     s.customer_name,
     `Place ${s.seat_number}`,
     `${s.duration_minutes} min`,

@@ -89,7 +89,7 @@ export default function RegisterPage() {
           onClick={() => navigate("/login")}
           className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text2 hover:text-text transition-colors"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={18} className="rtl:rotate-180" />
         </button>
         <button
           onClick={() => {
@@ -137,7 +137,7 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="space-y-4">
           <Input
-            placeholder="Nom complet"
+            placeholder={t("auth.your_name")}
             icon={<User size={16} />}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}

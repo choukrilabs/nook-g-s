@@ -1,7 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { CirclePlus as PlusCircle, Plus, List, Users, ChartBar as BarChart2, Zap, Clock as ClockIcon, RefreshCw, Activity, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Banknote, CreditCard, Gift, Wallet, ChevronRight, Loader as Loader2, TrendingUp, ArrowUpRight } from "lucide-react";
+import {
+  PlusCircle,
+  Plus,
+  List,
+  Users,
+  BarChart2,
+  Zap,
+  Clock as ClockIcon,
+  RefreshCw,
+  Activity,
+  CheckCircle,
+  AlertTriangle,
+  Banknote,
+  CreditCard,
+  Gift,
+  Wallet,
+  ChevronRight,
+  Loader2,
+  TrendingUp,
+  ArrowUpRight,
+} from "lucide-react";
 import { TopBar } from "../components/layout/TopBar";
 import { SessionCard } from "../components/sessions/SessionCard";
 import { Button } from "../components/ui/Button";
@@ -11,7 +31,7 @@ import { useUIStore } from "../stores/uiStore";
 import { useRealtime } from "../hooks/useRealtime";
 import { useTranslation } from "../i18n";
 import { supabase } from "../lib/supabase";
-import { Session } from "../types";
+import { Session, StaffPermissions } from "../types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { db } from "../lib/offlineDB";
@@ -103,16 +123,16 @@ export default function DashboardPage() {
       return;
     }
 
-    const { data: sessions } = (await supabase
+    const { data: sessions } = await supabase
       .from("sessions")
       .select("*")
       .eq("cafe_id", cafe.id)
       .eq("status", "completed")
       .gte("ended_at", today.toISOString())
-      .order("ended_at", { ascending: false })) as any;
+      .order("ended_at", { ascending: false });
 
     if (sessions) {
-      const revenue = sessions.reduce((acc, s) => acc + s.total_amount, 0);
+      const revenue = sessions.reduce((acc: number, s: Session) => acc + s.total_amount, 0);
       setTodayStats({
         revenue,
         total: sessions.length + activeSessions.length,
@@ -129,11 +149,11 @@ export default function DashboardPage() {
     loadStats();
   }, [cafe, activeSessions.length]);
 
-  const hasPermission = (perm: "reports" | "clients") => {
+  const hasPermission = (perm: keyof StaffPermissions) => {
     if (type === "owner") return true;
     if (!staff?.permissions) return false;
-    const perms = staff.permissions as any;
-    return perms[perm];
+    const perms = staff.permissions as unknown as StaffPermissions;
+    return !!perms[perm];
   };
 
   return (
@@ -153,7 +173,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="p-4 glass rounded-2xl flex items-center gap-4 text-error border-error/30 shadow-2xl shadow-error/10 relative overflow-hidden group"
           >
-            <div className="absolute top-0 start-0 w-1 h-full bg-error/50" />
+            <div className="absolute top-0 left-0 w-1 h-full bg-error/50" />
             <div className="w-12 h-12 bg-error/10 rounded-2xl flex items-center justify-center shrink-0 border border-error/20 group-hover:bg-error/20 transition-colors">
               <AlertTriangle size={24} className="animate-pulse" />
             </div>
@@ -175,8 +195,8 @@ export default function DashboardPage() {
           className="relative p-8 rounded-[32px] border border-white/5 bg-bg2 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] overflow-hidden"
         >
           {/* Advanced Mesh Background */}
-          <div className="absolute top-[-20%] end-[-10%] w-[300px] h-[300px] bg-accent/20 rounded-full blur-[120px] mix-blend-screen animate-pulse pointer-events-none" />
-          <div className="absolute bottom-[-10%] start-[-5%] w-[200px] h-[200px] bg-accent/10 rounded-full blur-[100px] mix-blend-overlay pointer-events-none" />
+          <div className="absolute top-[-20%] right-[-10%] w-[300px] h-[300px] bg-accent/20 rounded-full blur-[120px] mix-blend-screen animate-pulse pointer-events-none" />
+          <div className="absolute bottom-[-10%] left-[-5%] w-[200px] h-[200px] bg-accent/10 rounded-full blur-[100px] mix-blend-overlay pointer-events-none" />
 
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-8">
@@ -195,13 +215,10 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      if (
-                        type === "owner" ||
-                        (staff?.permissions as any)?.clients
-                      ) {
+                      if (hasPermission("clients")) {
                         navigate("/clients");
                       } else {
-                        addToast("Accès refusé", "error");
+                        addToast(t("dashboard.access_denied"), "error");
                       }
                     }}
                     className="w-11 h-11 rounded-2xl glass flex items-center justify-center text-text2 hover:text-accent hover:border-accent/40 active:scale-90 transition-all"

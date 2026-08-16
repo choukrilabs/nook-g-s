@@ -2,7 +2,10 @@ import * as React from 'react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { Search, UserPlus, Wallet, Phone, FileText, ChevronRight, Plus, Loader as Loader2, User, Clock as ClockIcon } from 'lucide-react'
+import { 
+  Search, UserPlus, Wallet, Phone, FileText, 
+  ChevronRight, Plus, Loader2, User, Clock as ClockIcon
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
@@ -76,7 +79,7 @@ export default function ClientsPage() {
     setIsSaving(true)
     try {
       const { error } = await supabase
-        .from('client_accounts' as any)
+        .from('client_accounts')
         .insert({
           cafe_id: cafe.id,
           name: newName,
@@ -87,7 +90,7 @@ export default function ClientsPage() {
       
       if (error) throw error
       
-      addToast("Compte client créé", "success")
+      addToast(t("clients.client_created"), "success")
       setShowNewClient(false)
       setNewName('')
       setNewPhone('')
@@ -116,7 +119,7 @@ export default function ClientsPage() {
         </div>
 
         <Input
-          placeholder="Rechercher un client..."
+          placeholder={t("reports.search_placeholder")}
           icon={<Search size={16} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -164,7 +167,7 @@ export default function ClientsPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-text3 group-hover:text-text group-hover:bg-white/10 transition-all">
-                    <ChevronRight size={18} />
+                    <ChevronRight size={18} className="rtl:rotate-180" />
                   </div>
                 </div>
               </motion.div>
@@ -191,7 +194,7 @@ export default function ClientsPage() {
       <BottomSheet isOpen={showNewClient} onClose={() => setShowNewClient(false)} title={t('clients.new')}>
         <form onSubmit={handleCreateClient} className="space-y-6 pt-4">
           <Input
-            placeholder="Nom du client"
+            placeholder={t("sessions.client")}
             icon={<User size={18} />}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -199,7 +202,7 @@ export default function ClientsPage() {
           />
           <Input
             type="tel"
-            placeholder="Téléphone (optionnel)"
+            placeholder="06 XX XX XX XX"
             icon={<Phone size={18} />}
             value={newPhone}
             onChange={(e) => setNewPhone(e.target.value)}
@@ -208,7 +211,7 @@ export default function ClientsPage() {
             <label className="text-xs font-bold text-text3 uppercase tracking-widest">Notes</label>
             <textarea
               className="input h-24 py-3 resize-none"
-              placeholder="Informations complémentaires..."
+              placeholder={t("sessions.notes")}
               value={newNotes}
               onChange={(e) => setNewNotes(e.target.value)}
             />

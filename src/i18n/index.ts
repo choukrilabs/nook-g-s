@@ -2,10 +2,11 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { translations } from './translations'
 
-type Language = 'fr' | 'en'
+type Language = 'fr' | 'en' | 'ar';
 
 interface LanguageState {
   language: Language
+  isRTL: boolean
   setLanguage: (lang: Language) => void
 }
 
@@ -13,9 +14,12 @@ export const useLanguageStore = create<LanguageState>()(
   persist(
     (set) => ({
       language: (localStorage.getItem('nook_lang') as Language) || 'fr',
+      isRTL: ((localStorage.getItem('nook_lang') as Language) || 'fr') === 'ar',
       setLanguage: (lang) => {
-        localStorage.setItem('nook_lang', lang)
-        set({ language: lang })
+        localStorage.setItem('nook_lang', lang);
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = lang;
+        set({ language: lang, isRTL: lang === 'ar' });
       },
     }),
     {
@@ -23,6 +27,12 @@ export const useLanguageStore = create<LanguageState>()(
     }
   )
 )
+
+// Initialize DOM on load
+const initialLang = (localStorage.getItem('nook_lang') as Language) || 'fr';
+document.documentElement.dir = initialLang === 'ar' ? 'rtl' : 'ltr';
+document.documentElement.lang = initialLang;
+
 
 export const useTranslation = () => {
   const { language } = useLanguageStore()

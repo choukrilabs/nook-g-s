@@ -6,6 +6,8 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { GlobalSearch } from './GlobalSearch'
 import { useEffect, useState } from 'react'
 
+import { StaffPermissions } from '../../types'
+
 export const TopBar = () => {
   const { type, staff, cafe, logout } = useAuthStore()
   const { logo } = useUIStore()
@@ -14,9 +16,9 @@ export const TopBar = () => {
   
   const isDashboard = location.pathname === '/dashboard' || location.pathname === '/'
 
-
-  const hasSettings = type === 'owner' || !!(staff?.permissions as any)?.settings;
-  const hasClients = type === 'owner' || !!(staff?.permissions as any)?.clients;
+  const perms = staff?.permissions as unknown as StaffPermissions | null
+  const hasSettings = type === 'owner' || !!perms?.settings;
+  const hasClients = type === 'owner' || !!perms?.clients;
 
   const handleLogout = async () => {
     if (type === 'owner') {
@@ -27,14 +29,14 @@ export const TopBar = () => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-14 z-[100] flex items-center justify-between px-4">
+    <header className="fixed top-0 inset-x-0 h-14 z-[100] flex items-center justify-between px-4">
       {/* Background with backdrop-blur moved to an absolute child to prevent containing block issues for fixed children */}
       <div className="absolute inset-0 bg-bg/90 backdrop-blur-xl border-b border-border -z-10" />
       
       <div className="flex items-center gap-3">
         {!isDashboard && (
           <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text transition-colors">
-            <ChevronLeft size={20} />
+            <ChevronLeft size={20} className="rtl:rotate-180" />
           </button>
         )}
         <Link to="/dashboard" className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${!isDashboard ? 'hidden sm:flex' : ''}`}>

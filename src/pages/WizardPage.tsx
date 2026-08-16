@@ -1,7 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { Store, MapPin, Navigation, Phone, Armchair, Clock as ClockIcon, Star, Timer, User, CircleCheck as CheckCircle, ArrowRight, Copy, Check, Loader as Loader2, FileSliders as Sliders, Lock } from 'lucide-react'
+import { 
+  Store, MapPin, Navigation, Phone, Armchair, Clock as ClockIcon, Star, Timer, 
+  User, CheckCircle, ArrowRight, Copy, Check, Loader2, Sliders, Lock
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
@@ -71,7 +74,7 @@ export default function WizardPage() {
 
       // 2. Insert Cafe
       const { data: cafe, error: cafeError } = await supabase
-        .from('cafes' as any)
+        .from('cafes')
         .insert({
           owner_id: owner?.id,
           name: cafeName,
@@ -89,12 +92,13 @@ export default function WizardPage() {
         .single()
       
       if (cafeError) throw cafeError
+      if (!cafe) throw new Error('Could not create cafe')
 
       // 3. Insert Staff if needed
       if (addStaff && staffName && staffPin) {
         const pinHash = await hashPIN(staffPin)
         const { error: staffError } = await supabase
-          .from('staff' as any)
+          .from('staff')
           .insert({
             cafe_id: cafe.id,
             name: staffName,
@@ -131,27 +135,27 @@ export default function WizardPage() {
             </div>
             <div className="space-y-4">
               <Input
-                placeholder="Nom du café"
+                placeholder={t("wizard.step1.title")}
                 icon={<Store size={18} />}
                 value={cafeName}
                 onChange={(e) => setCafeName(e.target.value)}
                 required
               />
               <Input
-                placeholder="Ville"
+                placeholder={t("wizard.step1.subtitle")}
                 icon={<MapPin size={18} />}
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
               />
               <Input
-                placeholder="Adresse complète"
+                placeholder={t("wizard.step1.title")}
                 icon={<Navigation size={18} />}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
               <Input
                 type="tel"
-                placeholder="Téléphone"
+                placeholder="06 XX XX XX XX"
                 icon={<Phone size={18} />}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -251,7 +255,7 @@ export default function WizardPage() {
                 className="space-y-6 pt-2"
               >
                 <Input
-                  placeholder="Nom de l'employé"
+                  placeholder={t("staff.name")}
                   icon={<User size={18} />}
                   value={staffName}
                   onChange={(e) => setStaffName(e.target.value)}
@@ -321,7 +325,7 @@ export default function WizardPage() {
                 <button 
                   onClick={() => {
                     navigator.clipboard.writeText(inviteCode)
-                    addToast("Code copié", "success")
+                    addToast(t("wizard.code_copied"), "success")
                   }}
                   className="p-2 text-text3 hover:text-accent transition-colors"
                 >
@@ -333,7 +337,7 @@ export default function WizardPage() {
 
             <Button onClick={() => navigate('/dashboard')} className="w-full h-14 text-lg">
               {t('wizard.finish')}
-              <ArrowRight size={20} />
+              <ArrowRight size={20} className="rtl:rotate-180" />
             </Button>
           </motion.div>
         )
@@ -345,7 +349,7 @@ export default function WizardPage() {
       {/* Progress Indicator */}
       {step < 4 && (
         <div className="w-full max-w-[520px] flex items-center justify-between mb-12 relative px-2">
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border -translate-y-1/2 z-0" />
+          <div className="absolute top-1/2 inset-x-0 h-0.5 bg-border -translate-y-1/2 z-0" />
           {[1, 2, 3].map((s) => (
             <div key={s} className="relative z-10 flex flex-col items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${

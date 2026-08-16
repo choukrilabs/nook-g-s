@@ -67,6 +67,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       staff: {
         Row: {
@@ -102,6 +103,7 @@ export interface Database {
           last_login_at?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       sessions: {
         Row: {
@@ -176,6 +178,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       client_accounts: {
         Row: {
@@ -214,6 +217,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       products: {
         Row: {
@@ -246,6 +250,7 @@ export interface Database {
           sort_order?: number
           created_at?: string
         }
+        Relationships: []
       }
       balance_transactions: {
         Row: {
@@ -287,6 +292,7 @@ export interface Database {
           description?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       audit_log: {
         Row: {
@@ -316,7 +322,75 @@ export interface Database {
           details?: Json
           created_at?: string
         }
+        Relationships: []
       }
+      staff_sessions: {
+        Row: {
+          user_id: string
+          staff_id: string
+          cafe_id: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          staff_id: string
+          cafe_id: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          staff_id?: string
+          cafe_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      current_cafe_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      lookup_cafe_by_invite: {
+        Args: {
+          p_code: string
+        }
+        Returns: {
+          id: string
+          name: string
+          setup_complete: boolean
+        }[]
+      }
+      list_staff_for_login: {
+        Args: {
+          p_cafe_id: string
+        }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      staff_pin_login: {
+        Args: {
+          p_cafe_id: string
+          p_staff_id: string
+          p_pin: string
+        }
+        Returns: {
+          id: string
+          name: string
+          permissions: Json
+        }[]
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
@@ -334,4 +408,18 @@ export interface StaffPermissions {
   reports: boolean
   clients: boolean
   settings: boolean
+  rates?: boolean
+}
+
+export interface SessionExtra {
+  id?: string
+  name: string
+  price: number
+  qty: number
+  quantity?: number
+  added_at?: string
+}
+
+export type EnrichedAuditLog = AuditLog & {
+  staff_name?: string
 }

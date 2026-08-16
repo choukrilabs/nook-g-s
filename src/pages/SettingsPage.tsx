@@ -1,16 +1,34 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Store, DollarSign, Bell, ShoppingBag, Users, Key, Globe, User, LogOut, ChevronDown, ChevronRight, Copy, RefreshCw, Check, ChartBar as BarChart2, Trash2 } from "lucide-react";
+import {
+  Store,
+  DollarSign,
+  Bell,
+  ShoppingBag,
+  Users,
+  Key,
+  Globe,
+  User,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  RefreshCw,
+  Check,
+  BarChart2,
+  Trash2,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore";
-import { useUIStore } from "../stores/uiStore";
+import { useUIStore, BillTemplate } from "../stores/uiStore";
 import { useTranslation, useLanguageStore } from "../i18n";
 import { useAudit } from "../hooks/useAudit";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { TopBar } from "../components/layout/TopBar";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { StaffPermissions } from "../types";
 
 export default function SettingsPage() {
   const { t, language } = useTranslation();
@@ -37,15 +55,16 @@ export default function SettingsPage() {
   );
   const [isSavingRates, setIsSavingRates] = useState(false);
 
+  const staffPerms = staff?.permissions as unknown as StaffPermissions | null;
   const isOwner = type === "owner";
-  const canEditRates = isOwner || (staff?.permissions as any)?.rates;
+  const canEditRates = isOwner || !!staffPerms?.rates;
 
   const handleSaveCafe = async () => {
     if (!cafe) return;
     setIsSaving(true);
     try {
       const { data, error } = await supabase
-        .from("cafes" as any)
+        .from("cafes")
         .update({ name: cafeName, phone })
         .eq("id", cafe.id)
         .select()
@@ -58,8 +77,8 @@ export default function SettingsPage() {
         phone,
       });
 
-      setCafe(data);
-      addToast("Informations mises à jour", "success");
+      if (data) setCafe(data);
+      addToast(t("settings.info_updated"), "success");
     } catch (error: any) {
       addToast(error.message, "error");
     } finally {
@@ -78,7 +97,7 @@ export default function SettingsPage() {
       }
 
       const { data, error } = await supabase
-        .from("cafes" as any)
+        .from("cafes")
         .update({ default_rate: defRate, premium_rate: premRate })
         .eq("id", cafe.id)
         .select()
@@ -91,8 +110,8 @@ export default function SettingsPage() {
         premium_rate: premRate,
       });
 
-      setCafe(data);
-      addToast("Tarifs mis à jour", "success");
+      if (data) setCafe(data);
+      addToast(t("settings.rates_updated"), "success");
     } catch (error: any) {
       addToast(error.message, "error");
     } finally {
@@ -113,7 +132,7 @@ export default function SettingsPage() {
         if (ev.target?.result) {
           const resultString = ev.target.result as string;
           setLogo(resultString);
-          addToast("Logo enregistré", "success");
+          addToast(t("settings.logo_saved"), "success");
         }
       };
       reader.readAsDataURL(e.target.files[0]);
@@ -122,10 +141,10 @@ export default function SettingsPage() {
 
   const handleRemoveLogo = () => {
     setLogo(null);
-    addToast("Logo supprimé", "info");
+    addToast(t("settings.logo_deleted"), "info");
   };
 
-  const hasReportsPermission = isOwner || (staff?.permissions as any)?.reports;
+  const hasReportsPermission = isOwner || !!staffPerms?.reports;
 
   const sections = [
     {
@@ -200,7 +219,7 @@ export default function SettingsPage() {
               <select
                 className="w-full bg-black/25 border border-border rounded-xl px-4 py-3 text-sm text-text focus:border-accent outline-none appearance-none cursor-pointer"
                 value={billTemplate}
-                onChange={(e) => setBillTemplate(e.target.value as any)}
+                onChange={(e) => setBillTemplate(e.target.value as BillTemplate)}
               >
                 <option value="standard" className="bg-surface text-text">
                   Standard (Détaillé & pro)
@@ -298,7 +317,7 @@ export default function SettingsPage() {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(cafe?.invite_code || "");
-                addToast("Code copié", "success");
+                addToast(t("settings.code_copied"), "success");
               }}
               className="p-2 text-text3 hover:text-accent"
             >
@@ -346,6 +365,22 @@ export default function SettingsPage() {
             </div>
             {language === "en" && <Check size={16} className="text-accent" />}
           </button>
+          <button
+            onClick={() => setLanguage("ar")}
+            className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${
+              language === "ar"
+                ? "bg-accent-glow border-accent text-accent2"
+                : "bg-surface2 border-border text-text"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-[10px] font-bold text-text3">
+                AR
+              </div>
+              <span className="text-sm font-semibold">العربية</span>
+            </div>
+            {language === "ar" && <Check size={16} className="text-accent" />}
+          </button>
         </div>
       ),
     },
@@ -362,7 +397,7 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="glass border-white/5 rounded-3xl p-6 flex flex-col gap-5 mb-8 relative overflow-hidden"
         >
-          <div className="absolute top-0 end-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
 
           {/* Cafe Info */}
           <div className="flex items-center gap-5 pb-5 border-b border-white/5 relative z-10">
@@ -437,7 +472,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-text3 group-hover:text-text">
                   {section.onClick ? (
-                    <ChevronRight size={18} />
+                    <ChevronRight size={18} className="rtl:rotate-180" />
                   ) : (
                     <ChevronDown
                       size={18}

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react'
-import { CircleCheck as CheckCircle, Circle as XCircle, TriangleAlert as AlertTriangle, Info, X } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react'
 import { useUIStore, Toast as ToastType } from '../../stores/uiStore'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -19,10 +19,10 @@ export const Toast = ({ toast }: { toast: ToastType }) => {
   }
 
   const borders = {
-    success: 'border-l-success',
-    error: 'border-l-error',
-    warning: 'border-l-warning',
-    info: 'border-l-info',
+    success: 'border-s-success',
+    error: 'border-s-error',
+    warning: 'border-s-warning',
+    info: 'border-s-info',
   }
 
   return (
@@ -32,7 +32,7 @@ export const Toast = ({ toast }: { toast: ToastType }) => {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
       className={cn(
-        'flex items-center gap-3 px-4 py-3 bg-surface2 border border-border border-l-4 rounded-xl shadow-2xl min-w-[280px] max-w-[400px]',
+        'flex items-center gap-3 px-4 py-3 bg-surface2 border border-border border-s-4 rounded-xl shadow-2xl min-w-[280px] max-w-[400px]',
         borders[toast.type]
       )}
     >

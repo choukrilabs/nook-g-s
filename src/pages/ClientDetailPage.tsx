@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, MoveVertical as MoreVertical, Phone, MessageCircle, CirclePlus as PlusCircle, ChartBar as BarChart, TrendingUp, Calendar, Clock as ClockIcon, Banknote, Wallet, Loader as Loader2, Play, Trash2, CreditCard as Edit2 } from 'lucide-react'
+import { 
+  ChevronLeft, MoreVertical, Phone, MessageCircle, 
+  PlusCircle, BarChart, TrendingUp, Calendar, 
+  Clock as ClockIcon, Banknote, Wallet, Loader2, Play, Trash2, Edit2
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/offlineDB'
 import { useAuthStore } from '../stores/authStore'
@@ -82,9 +86,9 @@ export default function ClientDetailPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-12">
-      <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
+      <header className="fixed top-0 inset-x-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
         <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
-          <ChevronLeft size={20} />
+          <ChevronLeft size={20} className="rtl:rotate-180" />
         </button>
         <h1 className="text-sm font-bold text-text">{client.name}</h1>
         <div className="relative">
@@ -202,7 +206,7 @@ export default function ClientDetailPage() {
                 className="pb-2 text-sm font-bold text-accent transition-all relative"
               >
                 Visites
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
+                <div className="absolute bottom-0 inset-x-0 h-0.5 bg-accent" />
               </button>
             </div>
             

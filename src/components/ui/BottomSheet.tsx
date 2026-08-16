@@ -37,7 +37,7 @@ export const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetPro
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border rounded-t-[24px] z-[160] max-h-[90vh] overflow-y-auto pb-safe"
+            className="fixed bottom-0 inset-x-0 bg-surface border-t border-border rounded-t-[24px] z-[160] max-h-[90vh] overflow-y-auto pb-safe"
           >
             <div className="sticky top-0 bg-surface z-10 px-4 pt-3 pb-2">
               <div className="w-8 h-1 bg-border2 rounded-full mx-auto mb-4" />

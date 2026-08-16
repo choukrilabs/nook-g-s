@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, MoveVertical as MoreVertical, Clock as ClockIcon, Gauge, CircleAlert as AlertCircle, ShoppingBag, Plus, CircleStop as StopCircle, CreditCard as Edit2, Trash2, CircleCheck as CheckCircle, Banknote, CreditCard, Wallet, Gift, Loader as Loader2, Phone, FileText } from 'lucide-react'
+import { 
+  ChevronLeft, MoreVertical, Clock as ClockIcon, Gauge, AlertCircle, 
+  ShoppingBag, Plus, StopCircle, Edit2, Trash2, CheckCircle,
+  Banknote, CreditCard, Wallet, Gift, Loader2, Phone, FileText
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
@@ -61,7 +65,7 @@ export default function SessionDetailPage() {
         .single()
       
       if (error || !data) {
-        addToast("Session non trouvée", "error")
+        addToast(t("sessions.session_not_found"), "error")
         navigate('/dashboard')
         return
       }
@@ -164,7 +168,7 @@ export default function SessionDetailPage() {
       setSession(data)
       setShowExtras(false)
       setSelectedExtras({})
-      addToast("Consommations ajoutées", "success")
+      addToast(t("sessions.extras_added"), "success")
     } catch (error: any) {
       addToast(error.message, 'error')
     }
@@ -184,7 +188,7 @@ export default function SessionDetailPage() {
       }, { ...session, extras: newExtras, extras_total: newExtrasTotal });
       
       setSession(data)
-      addToast("Article supprimé", "success")
+      addToast(t("sessions.item_deleted"), "success")
     } catch (error: any) {
       addToast(error.message, 'error')
     }
@@ -236,7 +240,7 @@ export default function SessionDetailPage() {
         })
       } catch (e) {}
 
-      addToast(`Session clôturée — ${totalAmount.toFixed(2)} DH`, "success")
+      addToast(t("sessions.session_closed_amount").replace("{{amount}}", totalAmount.toFixed(2)), "success")
       setShowEnd(false)
     } catch (error: any) {
       addToast(error.message, 'error')
@@ -258,9 +262,9 @@ export default function SessionDetailPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-32">
-      <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
+      <header className="fixed top-0 inset-x-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
         <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
-          <ChevronLeft size={20} />
+          <ChevronLeft size={20} className="rtl:rotate-180" />
         </button>
         <h1 className="text-sm font-bold text-text">Place {session.seat_number}</h1>
         <div className="relative">
@@ -324,7 +328,7 @@ export default function SessionDetailPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="p-8 rounded-3xl border border-accent/20 bg-linear-to-br from-accent/10 via-surface to-transparent flex flex-col items-center text-center relative overflow-hidden shadow-2xl shadow-accent/10"
         >
-          <div className="absolute top-0 start-0 w-full h-1 bg-linear-to-r from-transparent via-accent to-transparent opacity-50" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-accent to-transparent opacity-50" />
           
           <div className="text-xs font-bold text-accent uppercase tracking-widest mb-1">{session.customer_name}</div>
           {session.customer_phone && (
@@ -402,8 +406,8 @@ export default function SessionDetailPage() {
                </div>
                
                {/* Semi-circle cutouts for the ticket effect */}
-               <div className="absolute -bottom-3 -start-3 w-6 h-6 bg-bg rounded-full border-r border-t border-gray-100"></div>
-               <div className="absolute -bottom-3 -end-3 w-6 h-6 bg-bg rounded-full border-l border-t border-gray-100"></div>
+               <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-bg rounded-full border-r border-t border-gray-100"></div>
+               <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-bg rounded-full border-l border-t border-gray-100"></div>
             </div>
 
             {/* Bill Lines Area */}
@@ -440,7 +444,7 @@ export default function SessionDetailPage() {
                         {type === 'owner' && session.status === 'active' && (
                           <button 
                             onClick={() => setItemToRemove(i)}
-                            className="w-6 h-6 bg-red-100 text-red-500 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors opacity-0 group-hover:opacity-100 absolute -end-2"
+                            className="w-6 h-6 bg-red-100 text-red-500 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors opacity-0 group-hover:opacity-100 absolute -right-2"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -517,7 +521,7 @@ export default function SessionDetailPage() {
 
       {/* Bottom Action */}
       {session.status === 'active' && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-linear-to-t from-bg via-bg to-transparent pt-12">
+        <div className="fixed bottom-0 inset-x-0 p-4 bg-linear-to-t from-bg via-bg to-transparent pt-12">
           <Button
             onClick={() => setShowEnd(true)}
             className="w-full h-14 text-lg bg-linear-to-br from-error to-[#dc2626] shadow-error/30"
@@ -531,7 +535,7 @@ export default function SessionDetailPage() {
       {/* Extras Sheet */}
       <BottomSheet isOpen={showExtras} onClose={() => setShowExtras(false)} title="Consommations">
         <div className="space-y-6 pt-4">
-          {['boisson', 'nourriture', 'autre'].map(cat => {
+          {Array.from(new Set(products.map(p => p.category))).map((cat: any) => {
             const catProducts = products.filter(p => p.category === cat)
             if (catProducts.length === 0) return null
             return (

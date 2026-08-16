@@ -141,7 +141,7 @@ export default function ReportsPage() {
       })
     }
     return acc
-  }, { boisson: 0, nourriture: 0, autre: 0 })
+  }, {} as Record<string, number>)
 
   // Chart Data
   const chartData = sessions.reduce((acc: any[], s) => {
@@ -202,16 +202,15 @@ export default function ReportsPage() {
     doc.setFontSize(14)
     doc.text('2. Répartition par Catégorie', 14, finalY)
 
+    const catLabels = Object.keys(categoryRevenue).map(cat => 
+      cat === 'boisson' ? 'Boissons' : cat === 'nourriture' ? 'Nourriture' : cat === 'autre' ? 'Autres' : cat.charAt(0).toUpperCase() + cat.slice(1)
+    )
+    const catValues = Object.keys(categoryRevenue).map(cat => `${(categoryRevenue[cat] || 0).toFixed(2)} DH`)
+
     autoTable(doc, {
       startY: finalY + 5,
-      head: [['Boissons', 'Nourriture', 'Autres']],
-      body: [
-        [
-          `${(categoryRevenue['boisson'] || 0).toFixed(2)} DH`,
-          `${(categoryRevenue['nourriture'] || 0).toFixed(2)} DH`,
-          `${(categoryRevenue['autre'] || 0).toFixed(2)} DH`
-        ]
-      ],
+      head: [['Catégorie', 'Revenu']],
+      body: catLabels.length > 0 ? catLabels.map((label, idx) => [label, catValues[idx]]) : [['-', '-']],
       theme: 'grid',
       headStyles: { fillColor: darkColor }
     })

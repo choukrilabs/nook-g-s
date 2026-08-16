@@ -135,7 +135,7 @@ export const GlobalSearch = () => {
                             {client.phone && <div className="text-xs text-text3">{client.phone}</div>}
                           </div>
                         </div>
-                        <ChevronRight size={16} className="text-text3" />
+                        <ChevronRight size={16} className="text-text3 rtl:rotate-180" />
                       </div>
                     ))}
                   </div>
@@ -166,7 +166,7 @@ export const GlobalSearch = () => {
                             {session.customer_phone && <div className="text-xs text-text3 mt-0.5">{session.customer_phone}</div>}
                           </div>
                         </div>
-                        <ChevronRight size={16} className="text-text3" />
+                        <ChevronRight size={16} className="text-text3 rtl:rotate-180" />
                       </div>
                     ))}
                   </div>

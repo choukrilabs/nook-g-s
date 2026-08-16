@@ -19,7 +19,7 @@ export const NumPad = ({ onPress, onDelete, onConfirm, showConfirm, className }:
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'delete', '0', 'confirm']
 
   return (
-    <div className={cn('grid grid-cols-3 gap-2.5', className)}>
+    <div dir="ltr" className={cn('grid grid-cols-3 gap-2.5', className)}>
       {keys.map((key) => {
         if (key === 'delete') {
           return (
@@ -29,7 +29,7 @@ export const NumPad = ({ onPress, onDelete, onConfirm, showConfirm, className }:
               onClick={onDelete}
               className="h-14 flex items-center justify-center bg-surface2 border border-border rounded-lg text-text2 hover:bg-white/5"
             >
-              <Delete size={20} />
+              <Delete size={20} className="rtl:rotate-180" />
             </motion.button>
           )
         }

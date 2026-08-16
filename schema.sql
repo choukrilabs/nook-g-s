@@ -1,5 +1,7 @@
 -- Enable the "uuid-ossp" extension to generate UUIDs if not already enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable pgcrypto so we can verify bcrypt hashes inside Postgres
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ==========================================
 -- TABLES CREATION
@@ -36,6 +38,14 @@ CREATE TABLE staff (
     active BOOLEAN DEFAULT TRUE,
     permissions JSONB DEFAULT '{"sessions": true, "reports": false, "clients": false, "settings": false}'::jsonb,
     last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2.1 Maps an anonymous auth session to the staff member it belongs to
+CREATE TABLE staff_sessions (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    cafe_id UUID NOT NULL REFERENCES cafes(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -118,37 +128,107 @@ CREATE TABLE audit_log (
 );
 
 -- ==========================================
--- ROW LEVEL SECURITY (RLS) POLICIES
+-- ROW LEVEL SECURITY (RLS) & HELPER FUNCTIONS
 -- ==========================================
--- To allow the client side app to work without strict RLS initially,
--- you can just disable RLS or create open policies.
--- In full production, you would restrict these based on cafe_id and auth.uid().
 
 -- Enable RLS on all tables
 ALTER TABLE cafes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE client_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE balance_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
--- Note: The following policies are set to allow FULL ACCESS for authenticated and anonymous users.
--- This is necessary since the app uses invite codes and offline sync from multiple devices.
--- If you want strict security, you should tie access to auth.uid() or a JWT claim.
+-- Resolves "what café does the current caller belong to" for BOTH
+-- owners (via cafes.owner_id) and staff (via staff_sessions)
+CREATE OR REPLACE FUNCTION current_cafe_id() RETURNS UUID
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT id FROM cafes WHERE owner_id = auth.uid()
+  UNION
+  SELECT cafe_id FROM staff_sessions WHERE user_id = auth.uid()
+  LIMIT 1;
+$$;
 
-CREATE POLICY "Allow all operations for cafes" ON cafes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations for staff" ON staff FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations for client_accounts" ON client_accounts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations for products" ON products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations for sessions" ON sessions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations for balance_transactions" ON balance_transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations for audit_log" ON audit_log FOR ALL USING (true) WITH CHECK (true);
+-- RLS POLICIES
+DROP POLICY IF EXISTS "Cafes access" ON cafes;
+DROP POLICY IF EXISTS "Staff access" ON staff;
+DROP POLICY IF EXISTS "Client accounts access" ON client_accounts;
+DROP POLICY IF EXISTS "Products access" ON products;
+DROP POLICY IF EXISTS "Sessions access" ON sessions;
+DROP POLICY IF EXISTS "Balance transactions access" ON balance_transactions;
+DROP POLICY IF EXISTS "Audit log access" ON audit_log;
+
+CREATE POLICY "Cafes access" ON cafes
+  FOR ALL USING (id = current_cafe_id()) WITH CHECK (id = current_cafe_id());
+
+CREATE POLICY "Staff access" ON staff
+  FOR ALL USING (cafe_id = current_cafe_id()) WITH CHECK (cafe_id = current_cafe_id());
+
+CREATE POLICY "Client accounts access" ON client_accounts
+  FOR ALL USING (cafe_id = current_cafe_id()) WITH CHECK (cafe_id = current_cafe_id());
+
+CREATE POLICY "Products access" ON products
+  FOR ALL USING (cafe_id = current_cafe_id()) WITH CHECK (cafe_id = current_cafe_id());
+
+CREATE POLICY "Sessions access" ON sessions
+  FOR ALL USING (cafe_id = current_cafe_id()) WITH CHECK (cafe_id = current_cafe_id());
+
+CREATE POLICY "Balance transactions access" ON balance_transactions
+  FOR ALL USING (cafe_id = current_cafe_id()) WITH CHECK (cafe_id = current_cafe_id());
+
+CREATE POLICY "Audit log access" ON audit_log
+  FOR ALL USING (cafe_id = current_cafe_id()) WITH CHECK (cafe_id = current_cafe_id());
+
+-- ==========================================
+-- AUTHENTICATION & LOGIN RPCs
+-- ==========================================
+
+-- Public: look up a café by invite code, minimal fields only
+CREATE OR REPLACE FUNCTION lookup_cafe_by_invite(p_code TEXT)
+RETURNS TABLE(id UUID, name TEXT, setup_complete BOOLEAN)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT id, name, setup_complete FROM cafes WHERE invite_code = p_code;
+$$;
+
+-- Public: list active staff names for a café (no pin_hash)
+CREATE OR REPLACE FUNCTION list_staff_for_login(p_cafe_id UUID)
+RETURNS TABLE(id UUID, name TEXT)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT id, name FROM staff WHERE cafe_id = p_cafe_id AND active = TRUE;
+$$;
+
+-- Must be called AFTER supabase.auth.signInAnonymously(), so auth.uid()
+-- is the anonymous session we're about to link. Verifies the PIN server-
+-- side and creates the staff_sessions link on success — pin_hash never
+-- leaves the database.
+CREATE OR REPLACE FUNCTION staff_pin_login(p_cafe_id UUID, p_staff_id UUID, p_pin TEXT)
+RETURNS TABLE(id UUID, name TEXT, permissions JSONB)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_hash TEXT;
+BEGIN
+  SELECT pin_hash INTO v_hash FROM staff
+    WHERE id = p_staff_id AND cafe_id = p_cafe_id AND active = TRUE;
+
+  IF v_hash IS NULL OR crypt(p_pin, v_hash) <> v_hash THEN
+    RAISE EXCEPTION 'invalid_pin';
+  END IF;
+
+  INSERT INTO staff_sessions (user_id, staff_id, cafe_id)
+  VALUES (auth.uid(), p_staff_id, p_cafe_id)
+  ON CONFLICT (user_id) DO UPDATE SET staff_id = EXCLUDED.staff_id, cafe_id = EXCLUDED.cafe_id;
+
+  UPDATE staff SET last_login_at = NOW() WHERE id = p_staff_id;
+
+  RETURN QUERY SELECT staff.id, staff.name, staff.permissions FROM staff WHERE staff.id = p_staff_id;
+END;
+$$;
 
 -- ==========================================
 -- REALTIME SUBSCRIPTIONS
 -- ==========================================
--- Enable Supabase Realtime for these tables
 ALTER PUBLICATION supabase_realtime ADD TABLE sessions;
 ALTER PUBLICATION supabase_realtime ADD TABLE cafes;
 ALTER PUBLICATION supabase_realtime ADD TABLE client_accounts;

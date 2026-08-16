@@ -9,6 +9,7 @@ function cn(...inputs: ClassValue[]) {
 
 interface ButtonProps extends Omit<HTMLMotionProps<"button">, 'children'> {
   variant?: 'primary' | 'ghost' | 'danger' | 'success'
+  size?: 'sm' | 'md' | 'lg' | string
   isLoading?: boolean
   children?: React.ReactNode
 }

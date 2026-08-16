@@ -4,7 +4,7 @@ import { ChevronLeft, Activity, User, Shield, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useTranslation } from '../i18n'
-import { AuditLog } from '../types'
+import { EnrichedAuditLog, AuditLog } from '../types'
 import { Input } from '../components/ui/Input'
 import { format } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
@@ -14,7 +14,7 @@ export default function AuditLogPage() {
   const navigate = useNavigate()
   const { cafe } = useAuthStore()
   
-  const [logs, setLogs] = useState<AuditLog[]>([])
+  const [logs, setLogs] = useState<EnrichedAuditLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -36,12 +36,12 @@ export default function AuditLogPage() {
         .eq('cafe_id', cafe.id)
         
       if (logsData) {
-        const staffMap = new Map(staffData?.map(s => [s.id, s.name]) || [])
-        const enrichedLogs = logsData.map(log => ({
+        const staffMap = new Map((staffData || []).map((s: { id: string; name: string }) => [s.id, s.name]))
+        const enrichedLogs: EnrichedAuditLog[] = logsData.map((log: AuditLog) => ({
           ...log,
           staff_name: log.is_owner ? t('auth.owner') : (log.staff_id ? staffMap.get(log.staff_id) || 'Employé inconnu' : 'Système')
         }))
-        setLogs(enrichedLogs as any)
+        setLogs(enrichedLogs)
       }
       setIsLoading(false)
     }
@@ -51,7 +51,7 @@ export default function AuditLogPage() {
 
   const filteredLogs = logs.filter(log => {
     const searchLower = search.toLowerCase()
-    const staffName = (log as any).staff_name?.toLowerCase() || ''
+    const staffName = log.staff_name?.toLowerCase() || ''
     const action = log.action.toLowerCase()
     return staffName.includes(searchLower) || action.includes(searchLower) || JSON.stringify(log.details).toLowerCase().includes(searchLower)
   })
@@ -75,9 +75,9 @@ export default function AuditLogPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-12">
-      <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center px-4">
+      <header className="fixed top-0 inset-x-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center px-4">
         <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
-          <ChevronLeft size={20} />
+          <ChevronLeft size={20} className="rtl:rotate-180" />
         </button>
         <h1 className="text-sm font-bold text-text ms-2">{t('settings.audit_log')}</h1>
       </header>
@@ -100,7 +100,7 @@ export default function AuditLogPage() {
                   ) : (
                     <User size={14} className="text-text3" />
                   )}
-                  <span className="text-xs font-bold text-text">{(log as any).staff_name}</span>
+                  <span className="text-xs font-bold text-text">{log.staff_name}</span>
                 </div>
                 <div className="text-[10px] text-text3 font-mono">
                   {format(new Date(log.created_at), 'dd MMM yyyy HH:mm', { locale: language === 'fr' ? fr : enUS })}

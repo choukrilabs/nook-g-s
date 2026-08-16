@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { X, User, Phone, Armchair, Clock as ClockIcon, Zap, FileSliders as Sliders, Play, Loader as Loader2, MessageSquare, ChevronDown, UserPlus, ChevronLeft, ShoppingBag } from "lucide-react";
+import {
+  X,
+  User,
+  Phone,
+  Armchair,
+  Clock as ClockIcon,
+  Zap,
+  Sliders,
+  Play,
+  Loader2,
+  MessageSquare,
+  ChevronDown,
+  UserPlus,
+  ChevronLeft,
+  ShoppingBag,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore";
 import { useSessionStore } from "../stores/sessionStore";
@@ -72,7 +87,7 @@ export default function NewSessionPage() {
 
       if (data) {
         const unique = Array.from(
-          new Set(data.map((s) => s.customer_name)),
+          new Set((data as Array<{ customer_name: string }>).map((s) => s.customer_name)),
         ).slice(0, 6);
         setRecentCustomers(unique);
       }
@@ -128,7 +143,7 @@ export default function NewSessionPage() {
 
     // Check if seat is already occupied
     if (activeSessions.some((s) => s.seat_number === selectedSeat)) {
-      addToast("Cette place est déjà occupée", "error");
+      addToast(t("sessions.seat_taken"), "error");
       return;
     }
 
@@ -211,7 +226,7 @@ export default function NewSessionPage() {
         // Log might fail offline, ignore
       }
 
-      addToast(`Session démarrée — Place ${selectedSeat}`, "success");
+      addToast(t("sessions.session_started_seat").replace("{{seat}}", selectedSeat.toString()), "success");
       navigate("/dashboard");
     } catch (error: any) {
       addToast(error.message, "error");
@@ -232,7 +247,7 @@ export default function NewSessionPage() {
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 relative">
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 p-3 bg-surface border border-border rounded-full text-text3 hover:text-text transition-all active:scale-95 shadow-sm"
+          className="absolute top-4 start-4 p-3 bg-surface border border-border rounded-full text-text3 hover:text-text transition-all active:scale-95 shadow-sm"
         >
           <X size={24} />
         </button>
@@ -293,12 +308,12 @@ export default function NewSessionPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-32">
-      <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
+      <header className="fixed top-0 inset-x-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
         <button
           onClick={() => setSessionMode(null)}
           className="p-2 -ms-2 text-text3 hover:text-text"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={20} className="rtl:rotate-180" />
         </button>
         <h1 className="text-sm font-bold text-text">
           {sessionMode === "time" ? "Au Temps" : "À la Consommation"}
@@ -314,7 +329,7 @@ export default function NewSessionPage() {
           </label>
           <div className="space-y-3">
             <Input
-              placeholder="Nom du client"
+              placeholder={t("sessions.client")}
               icon={<User size={18} />}
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
@@ -337,7 +352,7 @@ export default function NewSessionPage() {
                 type="tel"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="06 00 00 00 00"
+                placeholder="06 XX XX XX XX"
                 icon={<Phone size={18} />}
                 value={customerPhone}
                 onChange={handlePhoneChange}
@@ -445,17 +460,13 @@ export default function NewSessionPage() {
               Produits consommés
             </label>
             <div className="space-y-6">
-              {["boisson", "nourriture", "autre"].map((cat) => {
+              {Array.from(new Set(products.map(p => p.category))).map((cat: any) => {
                 const catProducts = products.filter((p) => p.category === cat);
                 if (catProducts.length === 0) return null;
                 return (
                   <div key={cat}>
                     <div className="text-[11px] font-bold text-text3 uppercase tracking-widest mb-3">
-                      {cat === "boisson"
-                        ? "Boissons"
-                        : cat === "nourriture"
-                          ? "Nourriture"
-                          : "Autre"}
+                      {cat === "boisson" ? "Boissons" : cat === "nourriture" ? "Nourriture" : cat === "autre" ? "Autre" : cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {catProducts.map((p) => (
@@ -538,7 +549,7 @@ export default function NewSessionPage() {
               >
                 <textarea
                   className="input h-24 py-3 resize-none"
-                  placeholder="Note interne..."
+                  placeholder={t("sessions.notes")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
@@ -549,7 +560,7 @@ export default function NewSessionPage() {
       </main>
 
       {/* Bottom Action */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-linear-to-t from-bg via-bg to-transparent pt-12 z-50">
+      <div className="fixed bottom-0 inset-x-0 p-4 bg-linear-to-t from-bg via-bg to-transparent pt-12 z-50">
         <AnimatePresence>
           {customerName && selectedSeat && (
             <motion.div

@@ -18,7 +18,7 @@ const customFetch = async (url: string | Request | URL, options?: RequestInit) =
   return fetch(url, options);
 }
 
-export const supabase = createClient<any>(
+export const supabase = createClient<Database>(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder',
   {

@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Plus, User, Key, Timer, ChartBar as BarChart2, Users, Settings, Trash2, Loader as Loader2, Check, Search, ListFilter as Filter, Power, DollarSign, Lock, MessageCircle, Phone } from 'lucide-react'
+import { 
+  ChevronLeft, Plus, User, Key, Timer, 
+  BarChart2, Users, Settings, Trash2, Loader2, Check,
+  Search, Filter, Power, DollarSign, Lock, MessageCircle, Phone
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
 import { useAudit } from '../hooks/useAudit'
-import { Staff } from '../types'
+import { Staff, Database, StaffPermissions } from '../types'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { BottomSheet } from '../components/ui/BottomSheet'
@@ -153,7 +157,7 @@ export default function StaffManagementPage() {
   const toggleStaffActive = async (staff: Staff) => {
     try {
       const { error } = await supabase
-        .from('staff' as any)
+        .from('staff')
         .update({ active: !staff.active })
         .eq('id', staff.id)
       
@@ -176,10 +180,10 @@ export default function StaffManagementPage() {
     if (!editingStaff || !name) return
     setIsSaving(true)
     try {
-      const updateData: any = {
+      const updateData: Partial<Database['public']['Tables']['staff']['Update']> = {
         name,
         phone: phone || null,
-        permissions,
+        permissions: permissions as any,
         active: isActive
       }
       
@@ -189,7 +193,7 @@ export default function StaffManagementPage() {
       }
 
       const { error } = await supabase
-        .from('staff' as any)
+        .from('staff')
         .update(updateData)
         .eq('id', editingStaff.id)
       
@@ -219,17 +223,31 @@ export default function StaffManagementPage() {
     }
   }
 
+  const getStaffPerms = (staff: Staff): { sessions: boolean; reports: boolean; clients: boolean; settings: boolean; rates: boolean } => {
+    if (!staff.permissions) {
+      return { sessions: true, reports: false, clients: false, settings: false, rates: false }
+    }
+    const perms = staff.permissions as unknown as StaffPermissions
+    return {
+      sessions: true,
+      reports: !!perms.reports,
+      clients: !!perms.clients,
+      settings: !!perms.settings,
+      rates: !!perms.rates
+    }
+  }
+
   const openEdit = (staff: Staff) => {
     setEditingStaff(staff)
     setName(staff.name)
     setPhone(staff.phone || '')
-    setPermissions(staff.permissions as any)
+    setPermissions(getStaffPerms(staff))
     setIsActive(staff.active)
     setPin('')
     setShowEdit(true)
   }
 
-  const togglePermission = (key: keyof typeof permissions) => {
+  const togglePermission = (key: keyof StaffPermissions) => {
     if (key === 'sessions') return // Always required
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }))
   }
@@ -244,10 +262,10 @@ export default function StaffManagementPage() {
 
   return (
     <div className="min-h-screen bg-bg pb-12">
-      <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
+      <header className="fixed top-0 inset-x-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
-            <ChevronLeft size={20} />
+            <ChevronLeft size={20} className="rtl:rotate-180" />
           </button>
           <h1 className="text-sm font-bold text-text">{t('staff.title')}</h1>
         </div>
@@ -279,7 +297,7 @@ export default function StaffManagementPage() {
           >
             <Filter size={20} />
             {statusFilter !== 'all' && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full" />
+              <span className="absolute top-2 end-2 w-2 h-2 bg-accent rounded-full" />
             )}
           </button>
           <button onClick={() => setShowAdd(true)} className="p-2 -me-2 text-accent hover:text-accent2">
@@ -314,13 +332,18 @@ export default function StaffManagementPage() {
               </div>
               <div>
                 <div className="text-sm font-bold text-text">{staff.name}</div>
-                <div className="flex gap-1.5 mt-1">
-                  {(staff.permissions as any).sessions && <Timer size={10} className="text-accent" />}
-                  {(staff.permissions as any).reports && <BarChart2 size={10} className="text-info" />}
-                  {(staff.permissions as any).clients && <Users size={10} className="text-success" />}
-                  {(staff.permissions as any).settings && <Settings size={10} className="text-warning" />}
-                  {(staff.permissions as any).rates && <DollarSign size={10} className="text-accent2" />}
-                </div>
+                {(() => {
+                  const perms = getStaffPerms(staff);
+                  return (
+                    <div className="flex gap-1.5 mt-1">
+                      {perms.sessions && <Timer size={10} className="text-accent" />}
+                      {perms.reports && <BarChart2 size={10} className="text-info" />}
+                      {perms.clients && <Users size={10} className="text-success" />}
+                      {perms.settings && <Settings size={10} className="text-warning" />}
+                      {perms.rates && <DollarSign size={10} className="text-accent2" />}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -392,7 +415,7 @@ export default function StaffManagementPage() {
             />
             
             <Input
-              placeholder="Téléphone (ex: +2126...)"
+              placeholder="06 XX XX XX XX"
               icon={<Phone size={18} />}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -495,32 +518,32 @@ export default function StaffManagementPage() {
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-text3 uppercase tracking-widest">{t('staff.permissions')}</label>
             <div className="space-y-2">
-              {[
+              {([
                 { id: 'sessions', icon: Timer, label: t('staff.perm_sessions'), locked: true },
-                { id: 'reports', icon: BarChart2, label: t('staff.perm_reports') },
-                { id: 'clients', icon: Users, label: t('staff.perm_clients') },
-                { id: 'settings', icon: Settings, label: t('staff.perm_settings') },
-                { id: 'rates', icon: DollarSign, label: t('staff.perm_rates') },
-              ].map(perm => (
+                { id: 'reports', icon: BarChart2, label: t('staff.perm_reports'), locked: false },
+                { id: 'clients', icon: Users, label: t('staff.perm_clients'), locked: false },
+                { id: 'settings', icon: Settings, label: t('staff.perm_settings'), locked: false },
+                { id: 'rates', icon: DollarSign, label: t('staff.perm_rates'), locked: false },
+              ] as const).map(perm => (
                 <button
                   key={perm.id}
-                  onClick={() => togglePermission(perm.id as any)}
+                  onClick={() => togglePermission(perm.id)}
                   className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${
-                    permissions[perm.id as keyof typeof permissions] ? 'bg-[#2a1a14] border-accent' : 'bg-surface2 border-border'
+                    permissions[perm.id] ? 'bg-[#2a1a14] border-accent' : 'bg-surface2 border-border'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <perm.icon size={18} className={permissions[perm.id as keyof typeof permissions] ? 'text-accent' : 'text-text3'} />
+                    <perm.icon size={18} className={permissions[perm.id] ? 'text-accent' : 'text-text3'} />
                     <div className="text-start">
                       <div className="text-sm font-bold text-text">{perm.label}</div>
                       {perm.locked && <div className="text-[10px] text-text3 italic">{t('staff.always_on')}</div>}
                     </div>
                   </div>
                   <div className={`w-10 h-5 rounded-full relative transition-colors ${
-                    permissions[perm.id as keyof typeof permissions] ? 'bg-accent' : 'bg-border'
+                    permissions[perm.id] ? 'bg-accent' : 'bg-border'
                   }`}>
                     <motion.div 
-                      animate={{ x: permissions[perm.id as keyof typeof permissions] ? 22 : 2 }}
+                      animate={{ x: permissions[perm.id] ? 22 : 2 }}
                       className="absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm"
                     />
                   </div>
@@ -533,7 +556,7 @@ export default function StaffManagementPage() {
             className="w-full h-14 mt-4" 
             onClick={showEdit ? handleUpdateStaff : handleAddStaff}
             isLoading={isSaving}
-            disabled={!name || (!showEdit && pin.length < 4) || (showEdit && pin && pin !== ' ' && pin.length < 4)}
+            disabled={!name || (!showEdit && pin.length < 4) || Boolean(showEdit && pin && pin !== ' ' && pin.length < 4)}
           >
             {showEdit ? t('staff.save') : t('staff.create')}
           </Button>
@@ -578,14 +601,14 @@ export default function StaffManagementPage() {
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-text3 uppercase tracking-widest">Par statut</h3>
             <div className="flex flex-wrap gap-2">
-              {[
-                { id: 'all', label: t('common.all') },
-                { id: 'active', label: t('staff.active') },
-                { id: 'inactive', label: t('staff.inactive') },
-              ].map(s => (
+              {([
+                { id: 'all' as const, label: t('common.all') },
+                { id: 'active' as const, label: t('staff.active') },
+                { id: 'inactive' as const, label: t('staff.inactive') },
+              ]).map(s => (
                 <button
                   key={s.id}
-                  onClick={() => setStatusFilter(s.id as any)}
+                  onClick={() => setStatusFilter(s.id)}
                   className={`px-4 py-2 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${
                     statusFilter === s.id 
                       ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 

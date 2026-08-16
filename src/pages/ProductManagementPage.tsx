@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Plus, ShoppingBag, Trash2, Loader as Loader2, Check, Search, Tag, DollarSign, Coffee, Pizza, MoveHorizontal as MoreHorizontal, Power, CreditCard as Edit2 } from 'lucide-react'
+import { 
+  ChevronLeft, Plus, ShoppingBag, Trash2, 
+  Loader2, Check, Search, Tag, DollarSign,
+  Coffee, Pizza, MoreHorizontal, Power, Edit2
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
@@ -75,7 +79,7 @@ export default function ProductManagementPage() {
     try {
       if (editingProduct) {
         const { error } = await supabase
-          .from('products' as any)
+          .from('products')
           .update({
             name,
             price,
@@ -96,7 +100,7 @@ export default function ProductManagementPage() {
         addToast(t('settings.product_updated') || "Produit modifié", "success")
       } else {
         const { error } = await supabase
-          .from('products' as any)
+          .from('products')
           .insert({
             cafe_id: cafe.id,
             name,
@@ -129,7 +133,7 @@ export default function ProductManagementPage() {
   const toggleProductActive = async (product: Product) => {
     try {
       const { error } = await supabase
-        .from('products' as any)
+        .from('products')
         .update({ active: !product.active })
         .eq('id', product.id)
       
@@ -177,18 +181,22 @@ export default function ProductManagementPage() {
     return matchesSearch && matchesCategory
   })
 
+  const customCategories = Array.from(new Set(products.map(p => p.category)))
+    .filter((c: string) => !['boisson', 'nourriture', 'autre'].includes(c));
+
   const categories = [
     { id: 'all', label: t('common.all'), icon: ShoppingBag },
     { id: 'boisson', label: t('cat.boisson'), icon: Coffee },
     { id: 'nourriture', label: t('cat.nourriture'), icon: Pizza },
     { id: 'autre', label: t('cat.autre'), icon: MoreHorizontal },
+    ...customCategories.map(c => ({ id: c, label: c, icon: Tag })),
   ]
 
   return (
     <div className="min-h-screen bg-bg pb-12">
-      <header className="fixed top-0 left-0 right-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
+      <header className="fixed top-0 inset-x-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
         <button onClick={() => navigate(-1)} className="p-2 -ms-2 text-text3 hover:text-text">
-          <ChevronLeft size={20} />
+          <ChevronLeft size={20} className="rtl:rotate-180" />
         </button>
         <h1 className="text-sm font-bold text-text">{t('settings.product_catalog')}</h1>
         <button onClick={openAdd} className="p-2 -me-2 text-accent hover:text-accent2">
@@ -229,10 +237,12 @@ export default function ProductManagementPage() {
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                   product.category === 'boisson' ? 'bg-info/10 text-info' : 
-                  product.category === 'nourriture' ? 'bg-warning/10 text-warning' : 'bg-surface2 text-text3'
+                  product.category === 'nourriture' ? 'bg-warning/10 text-warning' : 
+                  product.category === 'autre' ? 'bg-surface2 text-text3' : 'bg-accent/10 text-accent'
                 }`}>
                   {product.category === 'boisson' ? <Coffee size={20} /> : 
-                   product.category === 'nourriture' ? <Pizza size={20} /> : <ShoppingBag size={20} />}
+                   product.category === 'nourriture' ? <Pizza size={20} /> : 
+                   product.category === 'autre' ? <MoreHorizontal size={20} /> : <Tag size={20} />}
                 </div>
                 <div>
                   <div className="text-sm font-bold text-text">{product.name}</div>
@@ -277,7 +287,7 @@ export default function ProductManagementPage() {
         <div className="space-y-6 pt-4">
           <Input
             label={t('settings.product_name')}
-            placeholder="ex: Café Noir, Sandwich..."
+            placeholder={t("settings.search_product")}
             icon={<Tag size={18} />}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -299,6 +309,7 @@ export default function ProductManagementPage() {
                 { id: 'boisson', label: t('cat.boisson'), icon: Coffee },
                 { id: 'nourriture', label: t('cat.nourriture'), icon: Pizza },
                 { id: 'autre', label: t('cat.autre'), icon: MoreHorizontal },
+                ...customCategories.map(c => ({ id: c, label: c, icon: Tag }))
               ].map(cat => (
                 <button
                   key={cat.id}
@@ -308,9 +319,18 @@ export default function ProductManagementPage() {
                   }`}
                 >
                   <cat.icon size={18} />
-                  <span className="text-[10px] font-bold">{cat.label}</span>
+                  <span className="text-[10px] font-bold truncate w-full text-center">{cat.label}</span>
                 </button>
               ))}
+            </div>
+            <div className="pt-2">
+              <label className="text-xs font-bold text-text3 uppercase tracking-widest mb-2 block">Nouveau catalogue</label>
+              <Input
+                placeholder={t("settings.category")}
+                icon={<Tag size={18} />}
+                value={!['boisson', 'nourriture', 'autre', ...customCategories].includes(category) ? category : ''}
+                onChange={(e) => setCategory(e.target.value)}
+              />
             </div>
           </div>
 

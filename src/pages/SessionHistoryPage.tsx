@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Search, ListFilter as Filter, Banknote, CreditCard, Wallet, Gift, Clock as ClockIcon, Calendar, ChevronRight, Check } from 'lucide-react'
+import { 
+  ChevronLeft, Search, Filter, Banknote, CreditCard, 
+  Wallet, Gift, Clock as ClockIcon, Calendar, ChevronRight, Check
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/offlineDB'
 import { useAuthStore } from '../stores/authStore'
@@ -143,7 +146,7 @@ export default function SessionHistoryPage() {
             >
               <Filter size={18} />
               {(period !== 'today' || statusFilter !== 'completed' || paymentFilter !== 'all') && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full" />
+                <span className="absolute top-2 end-2 w-2 h-2 bg-accent rounded-full" />
               )}
             </button>
             <button 
@@ -276,7 +279,7 @@ export default function SessionHistoryPage() {
                           {session.total_amount ? session.total_amount.toFixed(2) : '0.00'} DH
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-text3" />
+                      <ChevronRight size={16} className="text-text3 rtl:rotate-180" />
                     </div>
                   </motion.div>
                 ))}
