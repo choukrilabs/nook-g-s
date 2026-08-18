@@ -31,8 +31,8 @@ export default function WelcomePage() {
   }, [type, isLoading, cafe, navigate]);
 
   const toggleLanguage = () => {
-    const nextLang = language === "fr" ? "en" : "fr";
-    setLanguage(nextLang as any);
+    const nextLang: "fr" | "en" = language === "fr" ? "en" : "fr";
+    setLanguage(nextLang);
   };
 
   return (

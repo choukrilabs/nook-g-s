@@ -73,7 +73,7 @@ export default function StaffManagementPage() {
 
     const { data } = await supabase
       .from('staff')
-      .select('*')
+      .select('id, cafe_id, name, phone, active, permissions, last_login_at, created_at, failed_attempts, locked_until')
       .eq('cafe_id', cafe.id)
       .order('created_at', { ascending: false })
     if (data) {
@@ -111,7 +111,7 @@ export default function StaffManagementPage() {
            staff_name: name,
            permissions
          })
-      } catch(e) {}
+      } catch(e) { console.error(e) }
 
       addToast(t('staff.staff_added'), "success")
       setShowAdd(false)
@@ -183,7 +183,7 @@ export default function StaffManagementPage() {
       const updateData: Partial<Database['public']['Tables']['staff']['Update']> = {
         name,
         phone: phone || null,
-        permissions: permissions as any,
+        permissions,
         active: isActive
       }
       

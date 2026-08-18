@@ -28,6 +28,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   useEffect(() => {
     if (!authLoading && type) {
@@ -50,9 +51,12 @@ export default function RegisterPage() {
       });
       if (error) throw error;
 
-      if (data.user) {
+      if (data.session) {
         addToast(t("common.success"), "success");
         navigate("/wizard");
+      } else if (data.user) {
+        setNeedsEmailConfirmation(true);
+        addToast(t("common.success"), "success");
       }
     } catch (error: any) {
       addToast(error.message, "error");
@@ -135,74 +139,89 @@ export default function RegisterPage() {
           <p className="text-sm text-text2 mt-1">{t("auth.subtitle")}</p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-4">
-          <Input
-            placeholder={t("auth.your_name")}
-            icon={<User size={16} />}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-          />
-          <Input
-            type="email"
-            placeholder={t("auth.email")}
-            icon={<Mail size={16} />}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <div className="space-y-2">
+        {needsEmailConfirmation ? (
+          <div className="space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent mx-auto">
+              <Mail size={24} />
+            </div>
+            <h2 className="text-lg font-bold text-text">Vérifiez votre boîte mail</h2>
+            <p className="text-sm text-text2">
+              Un lien de confirmation a été envoyé à <strong className="text-text">{email}</strong>. Cliquez dessus pour activer votre compte puis connectez-vous.
+            </p>
+            <Button onClick={() => navigate("/login")} className="w-full mt-4">
+              Aller à la page de connexion
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleRegister} className="space-y-4">
             <Input
-              type={showPassword ? "text" : "password"}
-              placeholder={t("auth.password")}
-              icon={<Lock size={16} />}
-              rightElement={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-text3 hover:text-text"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              }
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t("auth.your_name")}
+              icon={<User size={16} />}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               required
             />
-            <div className="flex gap-1 h-1 px-1">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`flex-1 rounded-full transition-colors ${
-                    i < strength
-                      ? strength === 1
-                        ? "bg-error"
-                        : strength === 2
-                          ? "bg-warning"
-                          : strength === 3
-                            ? "bg-yellow-500"
-                            : "bg-success"
-                      : "bg-border"
-                  }`}
-                />
-              ))}
+            <Input
+              type="email"
+              placeholder={t("auth.email")}
+              icon={<Mail size={16} />}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <div className="space-y-2">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder={t("auth.password")}
+                icon={<Lock size={16} />}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-text3 hover:text-text"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                }
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <div className="flex gap-1 h-1 px-1">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`flex-1 rounded-full transition-colors ${
+                      i < strength
+                        ? strength === 1
+                          ? "bg-error"
+                          : strength === 2
+                            ? "bg-warning"
+                            : strength === 3
+                              ? "bg-yellow-500"
+                              : "bg-success"
+                        : "bg-border"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
 
-          <Button type="submit" className="w-full" isLoading={isLoading}>
-            {t("auth.register")}
-          </Button>
+            <Button type="submit" className="w-full" isLoading={isLoading}>
+              {t("auth.register")}
+            </Button>
 
-          <p className="text-center text-sm text-text3 pt-2">
-            {t("auth.already_account")}
-            <Link
-              to="/login"
-              className="text-accent hover:underline font-medium"
-            >
-              {t("auth.login_link")}
-            </Link>
-          </p>
-        </form>
+            <p className="text-center text-sm text-text3 pt-2">
+              {t("auth.already_account")}
+              <Link
+                to="/login"
+                className="text-accent hover:underline font-medium"
+              >
+                {t("auth.login_link")}
+              </Link>
+            </p>
+          </form>
+        )}
       </motion.div>
     </div>
   );

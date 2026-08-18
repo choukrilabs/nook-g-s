@@ -130,13 +130,14 @@ ${errorInfo?.componentStack || "N/A"}`;
         return this.props.fallback;
       }
 
-      let lang = "fr";
+      let savedLang = "fr";
       try {
-        lang = localStorage.getItem("nook_language") || "fr";
-        if (!fallbackTranslations[lang]) lang = "fr";
-      } catch {
-        lang = "fr";
+        const stored = localStorage.getItem("nook_language");
+        if (stored && fallbackTranslations[stored]) savedLang = stored;
+      } catch (e) {
+        console.error(e);
       }
+      const lang = savedLang;
 
       const t = fallbackTranslations[lang] || fallbackTranslations.fr;
       const isRTL = lang === "ar";

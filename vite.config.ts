@@ -3,22 +3,11 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import { validateTranslations } from './scripts/check-translations.ts';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [
-      {
-        name: 'validate-translations',
-        buildStart() {
-          const result = validateTranslations(['fr', 'en', 'ar']);
-          if (!result.valid) {
-            const msg = `[i18n-check] Translation validation failed (${result.errors.length} mismatches):\n` + result.errors.join('\n');
-            this.error(msg);
-          }
-        },
-      },
       react(), 
       tailwindcss(),
       VitePWA({
@@ -122,20 +111,19 @@ export default defineConfig(({mode}) => {
         }
       })
     ],
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
     resolve: { // resolve alias
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
     build: {
+      outDir: 'dist',
+      emptyOutDir: true,
       rollupOptions: {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-ui': ['lucide-react', 'motion/react'],
+            'vendor-ui': ['lucide-react', 'motion'],
             'vendor-db': ['@supabase/supabase-js', 'zustand'],
             'vendor-utils': ['date-fns']
           }

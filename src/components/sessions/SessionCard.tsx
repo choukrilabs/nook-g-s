@@ -8,6 +8,7 @@ import { fr } from 'date-fns/locale'
 
 import { useAuthStore } from '../../stores/authStore'
 import { generateReceiptPDF } from '../../lib/pdf'
+import { calculateDuration, calculateTimeCost, calculateSessionTotal } from '../../lib/calculations'
 
 interface SessionCardProps {
   session: Session
@@ -23,21 +24,12 @@ export const SessionCard = ({ session, onEnd }: SessionCardProps) => {
 
   useEffect(() => {
     const update = () => {
-      const start = new Date(session.started_at).getTime()
-      const now = new Date().getTime()
-      const diffMs = now - start
+      const { hours, durationMinutes, formatted } = calculateDuration(session.started_at)
+      setElapsed(formatted)
       
-      const hours = Math.floor(diffMs / 3600000)
-      const minutes = Math.floor((diffMs % 3600000) / 60000)
-      const seconds = Math.floor((diffMs % 60000) / 1000)
-      
-      setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`)
-      
-      // Calculate amount
-      const durationHours = diffMs / 3600000
-      const calculatedAmount = durationHours * session.rate_per_hour
-      const rawTotal = calculatedAmount + session.extras_total
-      setAmount(Math.max(cafe?.premium_rate || 0, rawTotal))
+      const timeCost = calculateTimeCost(durationMinutes, session.rate_per_hour, 0)
+      const { totalAmount } = calculateSessionTotal(timeCost, session.extras_total, cafe?.premium_rate || 0)
+      setAmount(totalAmount)
       
       // Check for long session based on cafe settings
       const alertHours = cafe?.long_session_alert_hours || 3

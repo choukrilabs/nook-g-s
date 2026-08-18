@@ -19,6 +19,11 @@ export const translations = {
         "get_early_access": "Accès anticipé",
         "login": "Se connecter"
     },
+    "pwa": {
+        "title": "Installer Nook OS",
+        "desc": "Installez l'application pour un accès rapide et une expérience hors ligne.",
+        "install": "Installer"
+    },
     "common": {
         "continue": "Continuer",
         "back": "Retour",
@@ -53,7 +58,8 @@ export const translations = {
         "reload_app": "Recharger l'application",
         "back_to_dashboard": "Retour à l'accueil",
         "technical_details": "Détails techniques",
-        "offline_data_safe": "Données et file d'attente hors ligne sécurisées"
+        "offline_data_safe": "Données et file d'attente hors ligne sécurisées",
+        "load_more": "Charger plus"
     },
     "auth": {
         "subtitle": "Gérez votre café intelligemment",
@@ -275,6 +281,11 @@ export const translations = {
         "get_early_access": "Get Early Access",
         "login": "Login"
     },
+    "pwa": {
+        "title": "Installer Nook OS",
+        "desc": "Installez l'application pour un accès rapide et une expérience hors ligne.",
+        "install": "Installer"
+    },
     "common": {
         "continue": "Continue",
         "back": "Back",
@@ -309,7 +320,8 @@ export const translations = {
         "reload_app": "Reload Application",
         "back_to_dashboard": "Return to Home",
         "technical_details": "Technical Details",
-        "offline_data_safe": "Offline queue & data preserved safely"
+        "offline_data_safe": "Offline queue & data preserved safely",
+        "load_more": "Load more"
     },
     "auth": {
         "subtitle": "Manage your cafe smartly",
@@ -531,6 +543,11 @@ export const translations = {
         "get_early_access": "تسجيل مبكر",
         "login": "تسجيل الدخول"
     },
+    "pwa": {
+        "title": "Installer Nook OS",
+        "desc": "Installez l'application pour un accès rapide et une expérience hors ligne.",
+        "install": "Installer"
+    },
     "common": {
         "continue": "متابعة",
         "back": "رجوع",
@@ -565,7 +582,8 @@ export const translations = {
         "reload_app": "إعادة تحميل التطبيق",
         "back_to_dashboard": "العودة للرئيسية",
         "technical_details": "التفاصيل التقنية",
-        "offline_data_safe": "البيانات وقائمة الانتظار محفوظة بأمان"
+        "offline_data_safe": "البيانات وقائمة الانتظار محفوظة بأمان",
+        "load_more": "تحميل المزيد"
     },
     "auth": {
         "subtitle": "سيّر المقهى ديالك بذكاء",

@@ -16,6 +16,11 @@ import { TopBar } from '../components/layout/TopBar'
 import { Input } from '../components/ui/Input'
 import { BottomSheet } from '../components/ui/BottomSheet'
 
+import { Button } from '../components/ui/Button'
+import { Skeleton, SessionCardSkeleton } from '../components/ui/Skeleton'
+
+const PAGE_SIZE = 40
+
 export default function SessionHistoryPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -23,6 +28,10 @@ export default function SessionHistoryPage() {
   
   const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [totalCount, setTotalCount] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('all')
   const [customDate, setCustomDate] = useState('')
@@ -30,26 +39,30 @@ export default function SessionHistoryPage() {
   const [paymentFilter, setPaymentFilter] = useState<'cash' | 'card' | 'account' | 'free' | 'all'>('all')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
-  useEffect(() => {
-    const loadSessions = async () => {
-      if (!cafe) return
-      setIsLoading(true)
+  const loadSessions = async (targetPage: number = 0, isInitial: boolean = false) => {
+    if (!cafe) return
+    if (targetPage === 0) {
+      if (isInitial) setIsLoading(true)
+    } else {
+      setIsLoadingMore(true)
+    }
 
-      let gteDate: Date | null = null;
-      let ltDate: Date | null = null;
-      if (period === 'today') {
-        gteDate = startOfDay(new Date());
-      } else if (period === 'week') {
-        gteDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-      } else if (period === 'month') {
-        gteDate = startOfMonth(new Date());
-      } else if (period === 'custom' && customDate) {
-        gteDate = startOfDay(new Date(customDate));
-        ltDate = new Date(gteDate);
-        ltDate.setDate(ltDate.getDate() + 1);
-      }
+    let gteDate: Date | null = null;
+    let ltDate: Date | null = null;
+    if (period === 'today') {
+      gteDate = startOfDay(new Date());
+    } else if (period === 'week') {
+      gteDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+    } else if (period === 'month') {
+      gteDate = startOfMonth(new Date());
+    } else if (period === 'custom' && customDate) {
+      gteDate = startOfDay(new Date(customDate));
+      ltDate = new Date(gteDate);
+      ltDate.setDate(ltDate.getDate() + 1);
+    }
 
-      // Load local data for instant display
+    // Load local data for instant display on page 0
+    if (targetPage === 0 && isInitial) {
       const localSessions = await db.sessions.toArray();
       let filtered = localSessions;
       
@@ -74,20 +87,26 @@ export default function SessionHistoryPage() {
       });
       
       if (filtered.length > 0) {
-        setSessions(filtered);
+        setSessions(filtered.slice(0, PAGE_SIZE));
         setIsLoading(false);
       }
+    }
 
-      if (!navigator.onLine) {
-         setIsLoading(false);
-         return;
-      }
-      
+    if (!navigator.onLine) {
+       setIsLoading(false);
+       setIsLoadingMore(false);
+       return;
+    }
+    
+    try {
+      const from = targetPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from('sessions')
-        .select('*')
+        .select('*', { count: 'estimated' })
         .eq('cafe_id', cafe.id)
-        .order('ended_at', { ascending: false, nullsFirst: true }) // nullsFirst so active sessions with null ended_at show at top
+        .order('ended_at', { ascending: false, nullsFirst: true })
       
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter)
@@ -102,16 +121,44 @@ export default function SessionHistoryPage() {
       if (gteDate) query = query.gte('started_at', gteDate.toISOString())
       if (ltDate) query = query.lt('started_at', ltDate.toISOString())
 
-      const { data } = await query as any
-      if (data) {
+      const { data, count, error } = await query.range(from, to)
+      if (error) {
+        console.error('Error fetching sessions:', error)
+      } else if (data) {
+        if (targetPage === 0) {
           setSessions(data)
-          db.sessions.bulkPut(data)
-      }
-      setIsLoading(false)
-    }
+        } else {
+          setSessions(prev => {
+            const existingIds = new Set(prev.map(s => s.id))
+            const newItems = data.filter(s => !existingIds.has(s.id))
+            return [...prev, ...newItems]
+          })
+        }
+        db.sessions.bulkPut(data)
 
-    loadSessions()
+        if (count !== null) {
+          setTotalCount(count)
+          setHasMore(from + data.length < count)
+        } else {
+          setHasMore(data.length === PAGE_SIZE)
+        }
+        setPage(targetPage)
+      }
+    } finally {
+      setIsLoading(false)
+      setIsLoadingMore(false)
+    }
+  }
+
+  useEffect(() => {
+    loadSessions(0, true)
   }, [cafe, period, customDate, statusFilter, paymentFilter])
+
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadSessions(page + 1, false)
+    }
+  }
 
   const filteredSessions = sessions.filter(s => 
     s.customer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -189,20 +236,34 @@ export default function SessionHistoryPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
-            <div className="text-[10px] text-text3 font-bold uppercase mb-1">{filteredSessions.length} {t('reports.sessions')}</div>
+            <div className="text-[10px] text-text3 font-bold uppercase mb-1">
+              {isLoading && sessions.length === 0 ? (
+                <Skeleton className="w-14 h-3 mx-auto rounded-full" />
+              ) : (
+                `${filteredSessions.length} ${t('reports.sessions')}`
+              )}
+            </div>
             <div className="text-lg font-mono font-bold text-text">{t('reports.total')}</div>
           </div>
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <div className="text-[10px] text-text3 font-bold uppercase mb-1">
-              {filteredSessions.reduce((acc, s) => acc + s.total_amount, 0).toFixed(2)} DH
+              {isLoading && sessions.length === 0 ? (
+                <Skeleton className="w-16 h-3 mx-auto rounded-full" />
+              ) : (
+                `${filteredSessions.reduce((acc, s) => acc + s.total_amount, 0).toFixed(2)} DH`
+              )}
             </div>
             <div className="text-lg font-mono font-bold text-accent2">{t('reports.revenue')}</div>
           </div>
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <div className="text-[10px] text-text3 font-bold uppercase mb-1">
-              {filteredSessions.length > 0 
-                ? Math.round(filteredSessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) / filteredSessions.length)
-                : 0} min
+              {isLoading && sessions.length === 0 ? (
+                <Skeleton className="w-12 h-3 mx-auto rounded-full" />
+              ) : (
+                `${filteredSessions.length > 0 
+                  ? Math.round(filteredSessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) / filteredSessions.length)
+                  : 0} min`
+              )}
             </div>
             <div className="text-lg font-mono font-bold text-text">{t('reports.average')}</div>
           </div>
@@ -211,25 +272,20 @@ export default function SessionHistoryPage() {
 
         <div className="space-y-8">
           {isLoading && sessions.length === 0 ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <div className="w-24 h-3 bg-white/5 rounded-full animate-pulse" />
-                <div className="w-16 h-3 bg-white/5 rounded-full animate-pulse" />
-              </div>
-              <div className="bg-surface border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-3 bg-white/5 rounded-full animate-pulse" />
-                      <div className="space-y-2">
-                        <div className="w-32 h-3 bg-white/10 rounded-full animate-pulse" />
-                        <div className="w-20 h-2 bg-white/5 rounded-full animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="w-12 h-4 bg-white/10 rounded-full animate-pulse" />
+            <div className="space-y-6">
+              {[0, 1].map((groupIndex) => (
+                <div key={groupIndex} className="space-y-3" style={{ opacity: 1 - groupIndex * 0.25 }}>
+                  <div className="flex items-center justify-between px-1">
+                    <Skeleton className="w-24 h-3 rounded-full" />
+                    <Skeleton className="w-16 h-3 rounded-full" />
                   </div>
-                ))}
-              </div>
+                  <div className="bg-surface border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <SessionCardSkeleton key={i} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : Object.keys(groupedSessions).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-text3">
@@ -287,6 +343,19 @@ export default function SessionHistoryPage() {
             </div>
             ))
           )}
+
+          {hasMore && (
+            <div className="pt-2 pb-4 flex justify-center">
+              <Button
+                variant="ghost"
+                onClick={handleLoadMore}
+                isLoading={isLoadingMore}
+                className="w-full max-w-xs h-11 border border-border text-xs font-bold uppercase tracking-wider hover:bg-surface2"
+              >
+                {t('common.load_more')}
+              </Button>
+            </div>
+          )}
         </div>
       </main>
       
@@ -300,16 +369,16 @@ export default function SessionHistoryPage() {
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-text3 uppercase tracking-widest">{t('common.filters')}</h3>
             <div className="flex flex-wrap gap-2">
-              {[
-                { id: 'today', label: t('common.today') },
-                { id: 'week', label: t('common.thisWeek') },
-                { id: 'month', label: t('common.thisMonth') },
-                { id: 'all', label: t('common.all') },
-                { id: 'custom', label: t('reports.custom_date') },
-              ].map(p => (
+              {([
+                { id: 'today' as const, label: t('common.today') },
+                { id: 'week' as const, label: t('common.thisWeek') },
+                { id: 'month' as const, label: t('common.thisMonth') },
+                { id: 'all' as const, label: t('common.all') },
+                { id: 'custom' as const, label: t('reports.custom_date') },
+              ]).map(p => (
                 <button
                   key={p.id}
-                  onClick={() => setPeriod(p.id as any)}
+                  onClick={() => setPeriod(p.id)}
                   className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
                     period === p.id 
                       ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
@@ -343,15 +412,15 @@ export default function SessionHistoryPage() {
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-text3 uppercase tracking-widest">Par statut</h3>
             <div className="flex flex-wrap gap-2">
-              {[
-                { id: 'all', label: 'Tous' },
-                { id: 'active', label: 'Actives' },
-                { id: 'completed', label: 'Terminées' },
-                { id: 'cancelled', label: 'Annulées' },
-              ].map(s => (
+              {([
+                { id: 'all' as const, label: 'Tous' },
+                { id: 'active' as const, label: 'Actives' },
+                { id: 'completed' as const, label: 'Terminées' },
+                { id: 'cancelled' as const, label: 'Annulées' },
+              ]).map(s => (
                 <button
                   key={s.id}
-                  onClick={() => setStatusFilter(s.id as any)}
+                  onClick={() => setStatusFilter(s.id)}
                   className={`px-4 py-2 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${
                     statusFilter === s.id 
                       ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
@@ -369,16 +438,16 @@ export default function SessionHistoryPage() {
           <div className="space-y-3 border-t border-border pt-4">
             <h3 className="text-xs font-bold text-text3 uppercase tracking-widest">Par paiement</h3>
             <div className="flex flex-wrap gap-2">
-              {[
-                { id: 'all', label: 'Tous' },
-                { id: 'cash', label: 'Espèces' },
-                { id: 'card', label: 'Carte' },
-                { id: 'account', label: 'Compte' },
-                { id: 'free', label: 'Offert' },
-              ].map(p => (
+              {([
+                { id: 'all' as const, label: 'Tous' },
+                { id: 'cash' as const, label: 'Espèces' },
+                { id: 'card' as const, label: 'Carte' },
+                { id: 'account' as const, label: 'Compte' },
+                { id: 'free' as const, label: 'Offert' },
+              ]).map(p => (
                 <button
                   key={p.id}
-                  onClick={() => setPaymentFilter(p.id as any)}
+                  onClick={() => setPaymentFilter(p.id)}
                   className={`px-4 py-2 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${
                     paymentFilter === p.id 
                       ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useSessionStore } from '../stores/sessionStore'
 import { db } from '../lib/offlineDB'
+import { Session, Staff } from '../types'
 
 export const useRealtime = () => {
   const { cafe, type, staff, setStaff, logout } = useAuthStore()
@@ -55,19 +56,24 @@ export const useRealtime = () => {
         },
         (payload) => {
           const { eventType, new: newRow, old: oldRow } = payload
+          const newSession = newRow as Session | null
+          const oldSession = oldRow as { id?: string } | null
           
-          if (eventType === 'INSERT') {
-            if ((newRow as any).status === 'active') {
-              addSession(newRow as any)
+          if (eventType === 'INSERT' && newSession) {
+            if (newSession.status === 'active') {
+              addSession(newSession)
             }
-          } else if (eventType === 'UPDATE') {
-            if ((newRow as any).status === 'active') {
-              updateSession(newRow as any)
+          } else if (eventType === 'UPDATE' && newSession) {
+            if (newSession.status === 'active') {
+              updateSession(newSession)
             } else {
-              removeSession((oldRow as any).id)
+              removeSession(newSession.id || oldSession?.id || '')
             }
           } else if (eventType === 'DELETE') {
-            removeSession((oldRow as any).id)
+            const targetId = oldSession?.id || (newSession as unknown as { id?: string })?.id
+            if (targetId) {
+              removeSession(targetId)
+            }
           }
         }
       )
@@ -88,7 +94,7 @@ export const useRealtime = () => {
             filter: `id=eq.${staff.id}`,
           },
           (payload) => {
-            const updatedStaff = payload.new as any
+            const updatedStaff = payload.new as Staff
             if (updatedStaff.active === false) {
               logout()
             } else {

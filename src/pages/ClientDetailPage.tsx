@@ -19,6 +19,8 @@ import { Input } from '../components/ui/Input'
 import { BottomSheet } from '../components/ui/BottomSheet'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { queueMutation } from '../lib/offlineSync'
+import { calculateClientAccountTopUp } from '../lib/calculations'
 
 export default function ClientDetailPage() {
   const { id } = useParams()
@@ -33,6 +35,9 @@ export default function ClientDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [sessionsSortOrder, setSessionsSortOrder] = useState<'desc' | 'asc'>('desc')
   const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const [showTopUpModal, setShowTopUpModal] = useState(false)
+  const [topUpAmount, setTopUpAmount] = useState<string>('100')
+  const [isSubmittingTopUp, setIsSubmittingTopUp] = useState(false)
 
   const loadData = async () => {
     if (!id) return
@@ -84,6 +89,63 @@ export default function ClientDetailPage() {
     )
   }
 
+  const handleTopUp = async () => {
+    if (!client) return
+    const amount = parseFloat(topUpAmount)
+    if (isNaN(amount) || amount <= 0) {
+      addToast('Montant invalide', 'error')
+      return
+    }
+
+    setIsSubmittingTopUp(true)
+    try {
+      let newBalance = calculateClientAccountTopUp(client.balance, amount)
+      
+      // If online, use atomic server-side RPC transaction with row lock
+      if (navigator.onLine && client.cafe_id) {
+        const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('process_client_balance_transaction', {
+          p_cafe_id: client.cafe_id,
+          p_client_id: client.id,
+          p_amount: amount,
+          p_type: 'credit',
+          p_description: 'Recharge de solde client',
+          p_staff_id: staff?.id || null,
+          p_session_id: null
+        })
+        if (rpcError) {
+          throw rpcError;
+        } else if (rpcData && (rpcData as any[]).length > 0) {
+          newBalance = Number((rpcData as any[])[0].new_balance)
+        }
+      } else {
+        throw new Error("Recharge de compte non disponible hors ligne.");
+      }
+
+      const updatedClient = {
+        ...client,
+        balance: newBalance,
+      }
+
+      try {
+        await logAction('balance_topup', {
+          client_id: client.id,
+          client_name: client.name,
+          amount: amount,
+          new_balance: newBalance,
+        })
+      } catch (e) { console.error(e) }
+
+      setClient(updatedClient)
+      await db.clients.put(updatedClient)
+      setShowTopUpModal(false)
+      addToast(`Compte rechargé de ${amount.toFixed(2)} DH (Nouveau solde: ${newBalance.toFixed(2)} DH)`, 'success')
+    } catch (error: any) {
+      addToast(error.message, 'error')
+    } finally {
+      setIsSubmittingTopUp(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-bg pb-12">
       <header className="fixed top-0 inset-x-0 h-14 bg-bg/90 backdrop-blur-xl border-b border-border z-[100] flex items-center justify-between px-4">
@@ -116,25 +178,13 @@ export default function ClientDetailPage() {
                     <button 
                       onClick={() => {
                         setShowMoreMenu(false)
-                        // TODO: implement edit client
+                        setShowTopUpModal(true)
                       }}
                       className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-text2 hover:text-text hover:bg-surface2 transition-colors text-start"
                     >
-                      <PlusCircle size={16} /> {/* Should be edit, but reusing for now or change to Edit2 */}
-                      Modifier le profil
+                      <Wallet size={16} />
+                      Recharger le solde
                     </button>
-                    {type === 'owner' && (
-                      <button 
-                        onClick={() => {
-                          setShowMoreMenu(false)
-                          // TODO: confirm delete
-                        }}
-                        className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-error hover:bg-error/10 transition-colors text-start"
-                      >
-                        <Trash2 size={16} /> {/* Wait, Trash2 needs importing if not present */}
-                        Supprimer le client
-                      </button>
-                    )}
                   </div>
                 </motion.div>
               </>
@@ -143,7 +193,7 @@ export default function ClientDetailPage() {
         </div>
       </header>
 
-      <main className="pt-20 px-4 space-y-8">
+      <main className="pt-20 px-4 space-y-6">
         {/* Header Section */}
         <div className="flex flex-col items-center text-center">
           <Avatar name={client.name} size="lg" className="mb-4" />
@@ -154,6 +204,27 @@ export default function ClientDetailPage() {
               {client.phone}
             </div>
           )}
+        </div>
+
+        {/* Balance Card */}
+        <div className="p-5 rounded-2xl border border-border bg-surface2 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
+              <Wallet size={22} />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-text3 uppercase tracking-wider">Solde Compte Client</div>
+              <div className="text-2xl font-mono font-black text-text">
+                {(client.balance || 0).toFixed(2)} <span className="text-sm font-sans font-bold text-accent">DH</span>
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowTopUpModal(true)}
+            className="h-10 px-4 text-xs font-bold"
+          >
+            Recharger
+          </Button>
         </div>
 
         {/* Action Card */}
@@ -258,6 +329,72 @@ export default function ClientDetailPage() {
         </div>
       </main>
 
+      {/* Top Up BottomSheet */}
+      <BottomSheet
+        isOpen={showTopUpModal}
+        onClose={() => setShowTopUpModal(false)}
+        title="Recharger le compte client"
+      >
+        <div className="space-y-6 pt-4">
+          <div className="bg-surface2 p-4 rounded-xl border border-border space-y-1">
+            <div className="text-xs text-text3">Client</div>
+            <div className="text-sm font-bold text-text">{client.name}</div>
+            <div className="text-xs text-text3 pt-1">
+              Solde actuel : <span className="font-mono font-bold text-accent">{(client.balance || 0).toFixed(2)} DH</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-text3 uppercase tracking-wider">Montant de la recharge (DH)</label>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {[50, 100, 200, 500].map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setTopUpAmount(amt.toString())}
+                  className={`py-2 rounded-xl text-xs font-mono font-bold border transition-all ${
+                    topUpAmount === amt.toString()
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-surface2 text-text border-border hover:border-border2'
+                  }`}
+                >
+                  +{amt} DH
+                </button>
+              ))}
+            </div>
+
+            <Input
+              type="number"
+              min="1"
+              step="any"
+              value={topUpAmount}
+              onChange={(e) => setTopUpAmount(e.target.value)}
+              placeholder="Montant en DH"
+            />
+          </div>
+
+          {(() => {
+            const parsedAmt = parseFloat(topUpAmount) || 0;
+            const newBal = (client.balance || 0) + parsedAmt;
+            return (
+              <div className="p-4 bg-surface2 rounded-xl border border-border flex justify-between items-center text-xs">
+                <span className="text-text3 font-medium">Nouveau solde prévu :</span>
+                <span className="font-mono font-black text-sm text-green-500">
+                  {newBal.toFixed(2)} DH
+                </span>
+              </div>
+            );
+          })()}
+
+          <Button
+            className="w-full h-14"
+            onClick={handleTopUp}
+            disabled={isSubmittingTopUp || !parseFloat(topUpAmount) || parseFloat(topUpAmount) <= 0}
+          >
+            {isSubmittingTopUp ? <Loader2 className="animate-spin" size={18} /> : 'Valider le rechargement'}
+          </Button>
+        </div>
+      </BottomSheet>
     </div>
   )
 }

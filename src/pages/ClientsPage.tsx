@@ -16,9 +16,12 @@ import { TopBar } from '../components/layout/TopBar'
 import { Input } from '../components/ui/Input'
 import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
+import { ClientCardSkeleton } from '../components/ui/Skeleton'
 import { BottomSheet } from '../components/ui/BottomSheet'
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
+
+const PAGE_SIZE = 30
 
 export default function ClientsPage() {
   const { t } = useTranslation()
@@ -28,6 +31,10 @@ export default function ClientsPage() {
   
   const [clients, setClients] = useState<ClientAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [totalCount, setTotalCount] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [showNewClient, setShowNewClient] = useState(false)
 
@@ -37,41 +44,87 @@ export default function ClientsPage() {
   const [newNotes, setNewNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const loadClients = async () => {
+  const loadClients = async (targetPage: number = 0, isInitial: boolean = false) => {
     if (!cafe) return
-    setIsLoading(true)
+    if (targetPage === 0) {
+      if (isInitial) setIsLoading(true)
+    } else {
+      setIsLoadingMore(true)
+    }
     
-    // Load local data first for instant display
-    const cached = await db.clients.where('cafe_id').equals(cafe.id).toArray()
-    if (cached.length > 0) {
-       setClients(cached.sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()))
-       setIsLoading(false)
+    // Load local data first for instant display on page 0
+    if (targetPage === 0 && isInitial) {
+      const cached = await db.clients.where('cafe_id').equals(cafe.id).limit(PAGE_SIZE).toArray()
+      if (cached.length > 0) {
+        setClients(cached.sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()))
+        setIsLoading(false)
+      }
     }
 
     if (!navigator.onLine) {
-       setIsLoading(false)
-       return
+      setIsLoading(false)
+      setIsLoadingMore(false)
+      return
     }
 
     try {
-      const { data } = await supabase
+      const from = targetPage * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+
+      let query = supabase
         .from('client_accounts')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('cafe_id', cafe.id)
         .order('updated_at', { ascending: false })
+
+      if (search.trim()) {
+        const trimmed = search.trim()
+        query = query.or(`name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`)
+      }
+
+      const { data, count, error } = await query.range(from, to)
       
-      if (data) {
-        setClients(data)
+      if (error) {
+        console.error('Error fetching clients:', error)
+      } else if (data) {
+        if (targetPage === 0) {
+          setClients(data)
+        } else {
+          setClients(prev => {
+            const existingIds = new Set(prev.map(c => c.id))
+            const newItems = data.filter(c => !existingIds.has(c.id))
+            return [...prev, ...newItems]
+          })
+        }
         db.clients.bulkPut(data)
+        
+        if (count !== null) {
+          setTotalCount(count)
+          setHasMore(from + data.length < count)
+        } else {
+          setHasMore(data.length === PAGE_SIZE)
+        }
+        setPage(targetPage)
       }
     } finally {
       setIsLoading(false)
+      setIsLoadingMore(false)
     }
   }
 
+  // Reload on search or cafe change with debounce
   useEffect(() => {
-    loadClients()
-  }, [cafe])
+    const timer = setTimeout(() => {
+      loadClients(0, true)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [cafe, search])
+
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadClients(page + 1, false)
+    }
+  }
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +148,7 @@ export default function ClientsPage() {
       setNewName('')
       setNewPhone('')
       setNewNotes('')
-      loadClients()
+      loadClients(0, true)
     } catch (error: any) {
       addToast(error.message, 'error')
     } finally {
@@ -103,11 +156,7 @@ export default function ClientsPage() {
     }
   }
 
-  const filteredClients = clients.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search))
-    if (!matchesSearch) return false
-    return true
-  })
+  const filteredClients = clients
 
   return (
     <div className="min-h-screen bg-bg pb-8">
@@ -127,16 +176,9 @@ export default function ClientsPage() {
         
         <div className="space-y-4">
           {isLoading && clients.length === 0 ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="glass border-white/5 rounded-3xl p-5 flex items-center justify-between" style={{ opacity: 1 - i * 0.15 }}>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-white/5 animate-pulse" />
-                  <div className="space-y-2">
-                    <div className="w-32 h-4 bg-white/10 rounded-full animate-pulse" />
-                    <div className="w-20 h-3 bg-white/5 rounded-full animate-pulse" />
-                  </div>
-                </div>
-                <div className="w-16 h-6 bg-white/10 rounded-full animate-pulse" />
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ opacity: 1 - i * 0.15 }}>
+                <ClientCardSkeleton />
               </div>
             ))
           ) : (
@@ -179,6 +221,19 @@ export default function ClientsPage() {
             <div className="flex flex-col items-center justify-center py-12 text-text3">
               <Wallet size={40} className="mb-4 opacity-20" />
               <p className="text-sm font-medium">Aucun client trouvé</p>
+            </div>
+          )}
+
+          {hasMore && (
+            <div className="pt-2 pb-4 flex justify-center">
+              <Button
+                variant="ghost"
+                onClick={handleLoadMore}
+                isLoading={isLoadingMore}
+                className="w-full max-w-xs h-11 border border-border text-xs font-bold uppercase tracking-wider hover:bg-surface2"
+              >
+                {t('common.load_more')}
+              </Button>
             </div>
           )}
         </div>

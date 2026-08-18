@@ -2,13 +2,17 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { fr, arMA } from "date-fns/locale";
-import { Session, Cafe } from "../types";
+import { Session, Cafe, SessionExtra } from "../types";
 import { useLanguageStore } from "../i18n";
 import html2canvas from "html2canvas";
 
 const getDateLocale = () => {
   const lang = useLanguageStore.getState().language;
   return lang === "ar" ? arMA : fr;
+};
+
+const getSessionExtras = (session: Session): SessionExtra[] => {
+  return Array.isArray(session.extras) ? (session.extras as unknown as SessionExtra[]) : [];
 };
 
 export const generateReceiptText = (cafe: Cafe, session: Session) => {
@@ -33,7 +37,7 @@ export const generateReceiptText = (cafe: Cafe, session: Session) => {
     text += `Temps: ${session.duration_minutes}m  -> ${session.time_cost?.toFixed(2)} DH\n`;
   }
 
-  const extras = session.extras as any[];
+  const extras = getSessionExtras(session);
   if (extras && extras.length > 0) {
     text += `Consommations:\n`;
     extras.forEach((extra) => {
@@ -111,7 +115,7 @@ export const generateReceiptPDF = async (cafe: Cafe, session: Session) => {
       y += 4;
     }
 
-    const extras = session.extras as any[];
+    const extras = getSessionExtras(session);
     if (extras && extras.length > 0) {
       extras.forEach((extra) => {
         const extraTotal = (
@@ -166,7 +170,7 @@ export const generateReceiptPDF = async (cafe: Cafe, session: Session) => {
       y += 5;
     }
 
-    const extras = session.extras as any[];
+    const extras = getSessionExtras(session);
     if (extras && extras.length > 0) {
       extras.forEach((extra) => {
         const extraTotal = (
@@ -242,7 +246,7 @@ export const generateReceiptPDF = async (cafe: Cafe, session: Session) => {
       y += 6;
     }
 
-    const extras = session.extras as any[];
+    const extras = getSessionExtras(session);
     if (extras && extras.length > 0) {
       doc.setFont("helvetica", "bold");
       doc.text(`Consommations:`, 5, y);
@@ -357,7 +361,7 @@ export const generateReportPDF = async (
   });
 
   // Footer
-  const pageCount = (doc as any).internal.getNumberOfPages();
+  const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(8);

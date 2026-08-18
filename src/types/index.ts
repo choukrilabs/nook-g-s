@@ -75,11 +75,13 @@ export interface Database {
           cafe_id: string
           name: string
           phone: string | null
-          pin_hash: string
+          pin_hash?: string
           active: boolean
           permissions: Json
           last_login_at: string | null
           created_at: string
+          failed_attempts: number
+          locked_until: string | null
         }
         Insert: {
           id?: string
@@ -91,6 +93,8 @@ export interface Database {
           permissions?: Json
           last_login_at?: string | null
           created_at?: string
+          failed_attempts?: number
+          locked_until?: string | null
         }
         Update: {
           id?: string
@@ -102,6 +106,8 @@ export interface Database {
           permissions?: Json
           last_login_at?: string | null
           created_at?: string
+          failed_attempts?: number
+          locked_until?: string | null
         }
         Relationships: []
       }

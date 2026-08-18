@@ -1,0 +1,88 @@
+            <div className="flex justify-between gap-1 sm:gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <input
+                  key={i}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete={i === 0 ? "one-time-code" : "off"}
+                  maxLength={6}
+                  className="w-10 sm:w-12 h-14 bg-black/25 border border-border rounded-lg text-center font-mono text-xl sm:text-2xl font-bold text-text focus:border-accent outline-none transition-colors"
+                  value={inviteCode[i] || ""}
+                  onFocus={(e) => e.target.select()}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pasted = e.clipboardData
+                      .getData("text")
+                      .replace(/[^0-9]/g, "")
+                      .slice(0, 6);
+                    if (pasted) {
+                      setInviteCode(pasted);
+                      const inputs =
+                        e.currentTarget.parentElement?.querySelectorAll(
+                          "input",
+                        );
+                      const nextIndex = Math.min(pasted.length, 5);
+                      if (inputs && inputs[nextIndex]) {
+                        (inputs[nextIndex] as HTMLInputElement).focus();
+                      }
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+
+                    if (val.length > 1) {
+                      if (
+                        val.length === 2 &&
+                        val.startsWith(inviteCode[i] || "")
+                      ) {
+                        const newChar = val.slice(1);
+                        const newCode = inviteCode.split("");
+                        newCode[i] = newChar;
+                        setInviteCode(newCode.join(""));
+                        if (i < 5)
+                          (
+                            e.target.nextSibling as HTMLInputElement
+                          )?.focus();
+                        return;
+                      }
+
+                      setInviteCode(val.slice(0, 6));
+                      const inputs =
+                        e.target.parentElement?.querySelectorAll(
+                          "input",
+                        );
+                      const nextIndex = Math.min(val.length, 5);
+                      if (inputs && inputs[nextIndex]) {
+                        (inputs[nextIndex] as HTMLInputElement).focus();
+                      }
+                      return;
+                    }
+
+                    const newCode = inviteCode.split("");
+                    newCode[i] = val;
+                    setInviteCode(newCode.join(""));
+
+                    if (val && i < 5) {
+                      (
+                        e.target.nextSibling as HTMLInputElement
+                      )?.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Backspace" &&
+                      !inviteCode[i] &&
+                      i > 0
+                    ) {
+                      const newCode = inviteCode.split("");
+                      newCode[i - 1] = "";
+                      setInviteCode(newCode.join(""));
+                      (
+                        e.currentTarget.previousElementSibling as HTMLInputElement
+                      )?.focus();
+                    }
+                  }}
+                />
+              ))}
+            </div>

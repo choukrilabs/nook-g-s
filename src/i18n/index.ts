@@ -10,18 +10,32 @@ interface LanguageState {
   setLanguage: (lang: Language) => void
 }
 
+const getSavedLanguage = (): Language => {
+  if (typeof localStorage !== 'undefined') {
+    return (localStorage.getItem('nook_lang') as Language) || 'fr';
+  }
+  return 'fr';
+};
+
 export const useLanguageStore = create<LanguageState>()(
   persist(
-    (set) => ({
-      language: (localStorage.getItem('nook_lang') as Language) || 'fr',
-      isRTL: ((localStorage.getItem('nook_lang') as Language) || 'fr') === 'ar',
-      setLanguage: (lang) => {
-        localStorage.setItem('nook_lang', lang);
-        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-        document.documentElement.lang = lang;
-        set({ language: lang, isRTL: lang === 'ar' });
-      },
-    }),
+    (set) => {
+      const initial = getSavedLanguage();
+      return {
+        language: initial,
+        isRTL: initial === 'ar',
+        setLanguage: (lang) => {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('nook_lang', lang);
+          }
+          if (typeof document !== 'undefined') {
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            document.documentElement.lang = lang;
+          }
+          set({ language: lang, isRTL: lang === 'ar' });
+        },
+      };
+    },
     {
       name: 'nook-language-storage',
     }
@@ -29,9 +43,11 @@ export const useLanguageStore = create<LanguageState>()(
 )
 
 // Initialize DOM on load
-const initialLang = (localStorage.getItem('nook_lang') as Language) || 'fr';
-document.documentElement.dir = initialLang === 'ar' ? 'rtl' : 'ltr';
-document.documentElement.lang = initialLang;
+if (typeof document !== 'undefined') {
+  const initialLang = getSavedLanguage();
+  document.documentElement.dir = initialLang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = initialLang;
+}
 
 
 export const useTranslation = () => {

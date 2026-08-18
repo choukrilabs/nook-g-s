@@ -4,15 +4,17 @@ import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { db } from './offlineDB';
 
+export type SyncableTable = 'products' | 'client_accounts' | 'staff' | 'sessions';
+
 export const syncDataToOfflineDB = async (cafeId: string) => {
   if (!navigator.onLine || !cafeId) return;
   try {
     const [productsRes, clientsRes, staffRes, sessionsRes] = await Promise.all([
       supabase.from('products').select('*').eq('cafe_id', cafeId),
       supabase.from('client_accounts').select('*').eq('cafe_id', cafeId),
-      supabase.from('staff').select('*').eq('cafe_id', cafeId),
+      supabase.from('staff').select('id, cafe_id, name, phone, active, permissions, last_login_at, created_at, failed_attempts, locked_until').eq('cafe_id', cafeId),
       supabase.from('sessions').select('*').eq('cafe_id', cafeId)
-        .gte('started_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .gte('started_at', new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
     ]);
 
     if (productsRes.data) await db.products.bulkPut(productsRes.data);
@@ -25,13 +27,13 @@ export const syncDataToOfflineDB = async (cafeId: string) => {
 };
 
 export const queueMutation = async (
-  table: string, 
+  table: SyncableTable, 
   action: 'insert' | 'update' | 'delete', 
-  payload: any, 
-  optimisticData?: any
+  payload: Record<string, unknown>, 
+  optimisticData?: Record<string, unknown>
 ) => {
-  const opId = payload.id || crypto.randomUUID();
-  const dataToStore = optimisticData || { ...payload, id: opId };
+  const opId = (payload.id as string) || crypto.randomUUID();
+  const dataToStore = (optimisticData || { ...payload, id: opId }) as any;
 
   // 1. Optimistic update (Zustand)
   if (table === 'sessions') {
@@ -66,11 +68,11 @@ export const queueMutation = async (
 
   // 3. Execute network request (Workbox Background Sync will catch failures automatically)
   try {
-    let query: any = supabase.from(table as any);
-    let response: any;
+    const query = supabase.from(table);
+    let response: { data?: any; error?: any } | null = null;
     
     // Ensure payload ID is set if it was generated
-    const finalPayload = { ...payload, id: opId };
+    const finalPayload = { ...payload, id: opId } as any;
 
     if (action === 'insert') {
       response = await query.insert(finalPayload).select().single();

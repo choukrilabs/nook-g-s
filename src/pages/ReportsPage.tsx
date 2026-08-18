@@ -15,13 +15,18 @@ import { supabase } from '../lib/supabase'
 import { db } from '../lib/offlineDB'
 import { useAuthStore } from '../stores/authStore'
 import { useTranslation } from '../i18n'
-import { Session } from '../types'
+import { Session, Product } from '../types'
 import { TopBar } from '../components/layout/TopBar'
+import { Skeleton, StatCardSkeleton } from '../components/ui/Skeleton'
 import { format, startOfDay, subDays, subMonths } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+
+interface AutoTableDoc extends jsPDF {
+  lastAutoTable?: { finalY: number }
+}
 
 export default function ReportsPage() {
   const { t } = useTranslation()
@@ -29,7 +34,7 @@ export default function ReportsPage() {
   const { cafe } = useAuthStore()
   
   const [sessions, setSessions] = useState<Session[]>([])
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('week')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -82,11 +87,13 @@ export default function ReportsPage() {
           .eq('cafe_id', cafe.id)
           .eq('status', 'completed')
           .gte('ended_at', startDate.toISOString())
-          .order('ended_at', { ascending: true }),
+          .order('ended_at', { ascending: true })
+          .limit(2000),
         supabase
           .from('products')
           .select('*')
           .eq('cafe_id', cafe.id)
+          .limit(500)
       ])
       
       if (sessionsRes.data) {
@@ -196,7 +203,8 @@ export default function ReportsPage() {
       headStyles: { fillColor: primaryColor }
     })
 
-    let finalY = (doc as any).lastAutoTable.finalY + 15
+    const atDoc = doc as AutoTableDoc
+    let finalY = (atDoc.lastAutoTable?.finalY ?? 100) + 15
 
     // Breakdown tables
     doc.setFontSize(14)
@@ -215,7 +223,7 @@ export default function ReportsPage() {
       headStyles: { fillColor: darkColor }
     })
     
-    finalY = (doc as any).lastAutoTable.finalY + 15
+    finalY = (atDoc.lastAutoTable?.finalY ?? finalY) + 15
     doc.setFontSize(14)
     doc.text('3. Répartition par Mode de Paiement', 14, finalY)
 
@@ -234,7 +242,7 @@ export default function ReportsPage() {
       headStyles: { fillColor: darkColor }
     })
 
-    finalY = (doc as any).lastAutoTable.finalY + 20
+    finalY = (atDoc.lastAutoTable?.finalY ?? finalY) + 20
 
     // Visual Chart (drawn natively)
     if (finalY > doc.internal.pageSize.height - 80) {
@@ -319,7 +327,7 @@ export default function ReportsPage() {
     })
 
     // Footer
-    const pageCount = (doc as any).internal.getNumberOfPages()
+    const pageCount = doc.getNumberOfPages()
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i)
         doc.setFontSize(9)
@@ -342,14 +350,14 @@ export default function ReportsPage() {
       <main className="pt-20 px-4 space-y-6">
         {/* Period Filter */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {[
-            { id: 'today', label: t('common.today') },
-            { id: 'week', label: t('common.thisWeek') },
-            { id: 'month', label: t('common.thisMonth') },
-          ].map(p => (
+          {([
+            { id: 'today' as const, label: t('common.today') },
+            { id: 'week' as const, label: t('common.thisWeek') },
+            { id: 'month' as const, label: t('common.thisMonth') },
+          ]).map(p => (
             <button
               key={p.id}
-              onClick={() => setPeriod(p.id as any)}
+              onClick={() => setPeriod(p.id)}
               className={`flex-shrink-0 px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                 period === p.id 
                   ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' 
@@ -363,89 +371,98 @@ export default function ReportsPage() {
 
         {/* Technical Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
-          >
-            <div className="absolute -right-4 -top-4 w-16 h-16 bg-accent/5 rounded-full blur-2xl group-hover:bg-accent/10 transition-colors" />
-            <div className="flex flex-col gap-3 relative z-10">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                  <Banknote size={12} />
+          {isLoading && sessions.length === 0 ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <StatCardSkeleton key={i} />
+            ))
+          ) : (
+            <>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
+              >
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-accent/5 rounded-full blur-2xl group-hover:bg-accent/10 transition-colors" />
+                <div className="flex flex-col gap-3 relative z-10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                      <Banknote size={12} />
+                    </div>
+                    <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">{t('reports.revenue') || 'Revenu'}</span>
+                  </div>
+                  <div className="text-xl font-mono font-extrabold text-accent leading-none">
+                    {stats.revenue.toFixed(2)} <span className="text-[10px] opacity-60">DH</span>
+                  </div>
                 </div>
-                <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">{t('reports.revenue') || 'Revenu'}</span>
-              </div>
-              <div className="text-xl font-mono font-extrabold text-accent leading-none">
-                {stats.revenue.toFixed(2)} <span className="text-[10px] opacity-60">DH</span>
-              </div>
-            </div>
-          </motion.div>
+              </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
-          >
-            <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
-            <div className="flex flex-col gap-3 relative z-10">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-surface2 flex items-center justify-center text-text2">
-                  <Activity size={12} />
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
+              >
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
+                <div className="flex flex-col gap-3 relative z-10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-surface2 flex items-center justify-center text-text2">
+                      <Activity size={12} />
+                    </div>
+                    <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">Commandes</span>
+                  </div>
+                  <div className="text-xl font-mono font-extrabold text-text leading-none">
+                    {stats.count} <span className="text-[10px] opacity-60 uppercase font-bold tracking-tighter">Sess.</span>
+                  </div>
                 </div>
-                <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">Commandes</span>
-              </div>
-              <div className="text-xl font-mono font-extrabold text-text leading-none">
-                {stats.count} <span className="text-[10px] opacity-60 uppercase font-bold tracking-tighter">Sess.</span>
-              </div>
-            </div>
-          </motion.div>
+              </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
-          >
-            <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
-            <div className="flex flex-col gap-3 relative z-10">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-surface2 flex items-center justify-center text-text2">
-                  <ClockIcon size={12} />
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
+              >
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
+                <div className="flex flex-col gap-3 relative z-10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-surface2 flex items-center justify-center text-text2">
+                      <ClockIcon size={12} />
+                    </div>
+                    <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">Moyenne</span>
+                  </div>
+                  <div className="text-xl font-mono font-extrabold text-text leading-none">
+                    {stats.avgDuration} <span className="text-[10px] opacity-60 uppercase font-bold tracking-tighter">Min.</span>
+                  </div>
                 </div>
-                <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">Moyenne</span>
-              </div>
-              <div className="text-xl font-mono font-extrabold text-text leading-none">
-                {stats.avgDuration} <span className="text-[10px] opacity-60 uppercase font-bold tracking-tighter">Min.</span>
-              </div>
-            </div>
-          </motion.div>
+              </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
-          >
-            <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
-            <div className="flex flex-col gap-3 relative z-10">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-surface2 flex items-center justify-center text-text2">
-                  <TrendingUp size={12} />
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="glass border-white/5 p-5 rounded-3xl shadow-sm relative overflow-hidden group"
+              >
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
+                <div className="flex flex-col gap-3 relative z-10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-surface2 flex items-center justify-center text-text2">
+                      <TrendingUp size={12} />
+                    </div>
+                    <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">Top Article</span>
+                  </div>
+                  <div className="text-xs font-bold text-text truncate leading-tight mt-1">
+                    {bestSellingItem ? `${bestSellingItem.name} (${bestSellingItem.qty})` : '-'}
+                  </div>
                 </div>
-                <span className="text-[9px] font-black text-text3 uppercase tracking-[0.2em]">Top Article</span>
-              </div>
-              <div className="text-xs font-bold text-text truncate leading-tight mt-1">
-                {bestSellingItem ? `${bestSellingItem.name} (${bestSellingItem.qty})` : '-'}
-              </div>
-            </div>
-          </motion.div>
+              </motion.div>
+            </>
+          )}
         </div>
 
         <button 
           onClick={generatePDF}
-          className="w-full h-12 mt-6 rounded-xl bg-accent text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-accent/20"
+          disabled={isLoading && sessions.length === 0}
+          className="w-full h-12 mt-6 rounded-xl bg-accent text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download size={18} />
           Download Report

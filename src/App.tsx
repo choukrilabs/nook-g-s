@@ -14,6 +14,7 @@ import { useUIStore } from "./stores/uiStore";
 import { Loader2 } from "lucide-react";
 import { ToastContainer } from "./components/ui/Toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { PWAInstallPrompt } from "./components/ui/PWAInstallPrompt";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 
 // Pages (to be created)
@@ -120,7 +121,7 @@ function AppRoutes() {
       // Add minimum loading time for the splash screen effect
       const minLoadTime = new Promise((resolve) => setTimeout(resolve, 2000));
 
-      let authPromise = (async () => {
+      const authPromise = (async () => {
         try {
           if (session?.user) {
             setOwner(session.user);
@@ -203,9 +204,6 @@ function AppRoutes() {
 
       setLoading(false);
 
-      if (navigator.onLine) {
-        
-      }
     };
 
     initAuth();
@@ -417,6 +415,7 @@ export default function App() {
       <ErrorBoundary>
         <div className="min-h-screen bg-bg text-text selection:bg-accent/30">
           <OfflineBanner />
+          <PWAInstallPrompt />
           <AppRoutes />
           <ToastContainer />
         </div>

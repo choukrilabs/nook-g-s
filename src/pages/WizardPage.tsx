@@ -50,33 +50,44 @@ export default function WizardPage() {
   // Step 4: Final
   const [inviteCode, setInviteCode] = useState('')
 
-  const handleFinish = async () => {
+  const handleFinish = async (skipStaff: boolean = false) => {
     setIsLoading(true)
     try {
-      // 1. Generate invite code with collision check
+      // 1. Resolve current authenticated owner user ID
+      const authUser = (await supabase.auth.getUser()).data.user
+      const userId = owner?.id || authUser?.id
+      if (!userId) {
+        throw new Error('Session expirée, veuillez vous reconnecter.')
+      }
+
+      // 2. Generate invite code with collision check via security definer RPC
       let code = ''
       let isUnique = false
+      let attempts = 0
       
-      while (!isUnique) {
-        code = Math.floor(100000 + Math.random() * 900000).toString()
-        const { data: existing } = await supabase
-          .from('cafes')
-          .select('id')
-          .eq('invite_code', code)
-          .maybeSingle()
+      while (!isUnique && attempts < 10) {
+        attempts++
+        code = Math.random().toString(36).substring(2, 10).toUpperCase()
+        const { data: existing, error: rpcError } = await supabase.rpc('lookup_cafe_by_invite', {
+          p_code: code
+        })
           
-        if (!existing) {
+        if (!rpcError && (!existing || existing.length === 0)) {
           isUnique = true
         }
+      }
+
+      if (!code) {
+        code = Math.random().toString(36).substring(2, 10).toUpperCase()
       }
       
       setInviteCode(code)
 
-      // 2. Insert Cafe
+      // 3. Insert Cafe
       const { data: cafe, error: cafeError } = await supabase
         .from('cafes')
         .insert({
-          owner_id: owner?.id,
+          owner_id: userId,
           name: cafeName,
           city,
           address,
@@ -94,25 +105,29 @@ export default function WizardPage() {
       if (cafeError) throw cafeError
       if (!cafe) throw new Error('Could not create cafe')
 
-      // 3. Insert Staff if needed
-      if (addStaff && staffName && staffPin) {
+      // 4. Insert Staff if requested and provided
+      if (!skipStaff && addStaff && staffName.trim() && staffPin) {
         const pinHash = await hashPIN(staffPin)
         const { error: staffError } = await supabase
           .from('staff')
           .insert({
             cafe_id: cafe.id,
-            name: staffName,
+            name: staffName.trim(),
             pin_hash: pinHash,
             permissions: staffPermissions
           })
         
-        if (staffError) throw staffError
+        if (staffError) {
+          console.error('Staff creation notice:', staffError)
+          addToast('Café créé. Vous pourrez ajouter des employés dans les paramètres.', 'info')
+        }
       }
 
       setCafe(cafe)
       setStep(4)
     } catch (error: any) {
-      addToast(error.message, 'error')
+      console.error('Wizard error:', error)
+      addToast(error.message || 'Erreur lors de la création du café', 'error')
     } finally {
       setIsLoading(false)
     }
@@ -285,11 +300,33 @@ export default function WizardPage() {
             )}
 
             <div className="flex flex-col gap-3">
-              <Button onClick={() => { setAddStaff(false); handleFinish(); }} className="w-full" isLoading={isLoading}>
-                {addStaff ? t('common.next') : t('common.next')}
+              <Button 
+                onClick={() => {
+                  if (addStaff) {
+                    if (!staffName.trim()) {
+                      addToast("Veuillez entrer le nom de l'employé", "error")
+                      return
+                    }
+                    if (staffPin.length < 4) {
+                      addToast("Veuillez entrer un code PIN à 4 chiffres", "error")
+                      return
+                    }
+                    handleFinish(false)
+                  } else {
+                    handleFinish(true)
+                  }
+                }} 
+                className="w-full" 
+                isLoading={isLoading}
+              >
+                {t('common.next')}
               </Button>
               {addStaff && (
-                <button onClick={() => { setAddStaff(false); handleFinish(); }} className="text-sm text-text3 hover:text-text transition-colors">
+                <button 
+                  type="button"
+                  onClick={() => handleFinish(true)} 
+                  className="text-sm text-text3 hover:text-text transition-colors py-1"
+                >
                   Ignorer cette étape
                 </button>
               )}

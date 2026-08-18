@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -93,7 +93,7 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [activeSessions, cafe]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!cafe) return;
     setIsRefreshing(true);
 
@@ -143,11 +143,11 @@ export default function DashboardPage() {
       db.sessions.bulkPut(sessions);
     }
     setIsRefreshing(false);
-  };
+  }, [cafe, activeSessions.length]);
 
   useEffect(() => {
     loadStats();
-  }, [cafe, activeSessions.length]);
+  }, [loadStats]);
 
   const hasPermission = (perm: keyof StaffPermissions) => {
     if (type === "owner") return true;

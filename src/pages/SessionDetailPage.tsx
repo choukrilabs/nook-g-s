@@ -12,23 +12,30 @@ import { useUIStore } from '../stores/uiStore'
 import { useTranslation } from '../i18n'
 import { useAudit } from '../hooks/useAudit'
 import { Button } from '../components/ui/Button'
-import { Session, Product } from '../types'
+import { Session, Product, SessionExtra, ClientAccount } from '../types'
 import { BottomSheet } from '../components/ui/BottomSheet'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { format } from 'date-fns'
 import { queueMutation } from '../lib/offlineSync'
 import { generateReceiptPDF, generateReceiptText } from '../lib/pdf'
 import { db } from '../lib/offlineDB'
+import {
+  calculateChange,
+  calculateClientAccountDebit,
+  formatDH,
+} from '../lib/calculations'
+import { calculateSessionCost, calculateNewExtrasTotal } from '../lib/pricing'
 
 export default function SessionDetailPage() {
   const { id } = useParams()
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { cafe, type } = useAuthStore()
+  const { cafe, type, staff } = useAuthStore()
   const addToast = useUIStore((state) => state.addToast)
   const { logAction } = useAudit()
 
   const [session, setSession] = useState<Session | null>(null)
+  const [clientAccount, setClientAccount] = useState<ClientAccount | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [elapsed, setElapsed] = useState('')
   const [timeCost, setTimeCost] = useState(0)
@@ -42,6 +49,10 @@ export default function SessionDetailPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedExtras, setSelectedExtras] = useState<Record<string, number>>({})
   const [itemToRemove, setItemToRemove] = useState<number | null>(null)
+
+  // End session & payment state
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'account' | 'free'>('cash')
+  const [cashTendered, setCashTendered] = useState<string>('')
 
   useEffect(() => {
     const loadSession = async () => {
@@ -73,7 +84,20 @@ export default function SessionDetailPage() {
       setIsLoading(false)
       
       // Update local cache
-      if (data) db.sessions.put(data)
+      if (data) {
+        db.sessions.put(data)
+        if (data.client_account_id) {
+          const { data: clientData } = await supabase
+            .from('client_accounts')
+            .select('*')
+            .eq('id', data.client_account_id)
+            .single()
+          if (clientData) {
+            setClientAccount(clientData)
+            db.clients.put(clientData)
+          }
+        }
+      }
     }
 
     const loadProducts = async () => {
@@ -104,25 +128,17 @@ export default function SessionDetailPage() {
   useEffect(() => {
     if (!session) return
     const update = () => {
-      const start = new Date(session.started_at).getTime()
-      const end = session.status === 'completed' && session.ended_at ? new Date(session.ended_at).getTime() : new Date().getTime()
-      const diffMs = end - start
+      const costResult = calculateSessionCost(
+        session as any,
+        {
+          defaultRate: cafe?.default_rate || 0,
+          premiumRate: cafe?.premium_rate || 0,
+        }
+      )
       
-      const hours = Math.floor(diffMs / 3600000)
-      const minutes = Math.floor((diffMs % 3600000) / 60000)
-      const seconds = Math.floor((diffMs % 60000) / 1000)
-      
-      setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`)
-      
-      if (session.status === 'completed') {
-        setTimeCost(session.time_cost || 0)
-      } else {
-        const durationHours = diffMs / 3600000
-        const isTimeBilling = session.rate_per_hour > 0;
-        const billedHours = isTimeBilling ? Math.max(1, durationHours) : durationHours;
-        setTimeCost(billedHours * session.rate_per_hour)
-      }
-      if (hours >= 3) setIsLong(true)
+      setElapsed(costResult.durationFormatted)
+      setTimeCost(costResult.timeCost)
+      setIsLong(costResult.isLongSession)
     }
 
     update()
@@ -130,21 +146,25 @@ export default function SessionDetailPage() {
       const interval = setInterval(update, 1000)
       return () => clearInterval(interval)
     }
-  }, [session])
+  }, [session, cafe])
+
+  const getExtras = (sess: Session): SessionExtra[] => {
+    return Array.isArray(sess.extras) ? (sess.extras as unknown as SessionExtra[]) : []
+  }
 
   const handleAddExtras = async () => {
     if (!session) return
-    const newExtras = [...(session.extras as any[])]
-    let newExtrasTotal = session.extras_total
+    const newExtras: SessionExtra[] = [...getExtras(session)]
 
-    Object.entries(selectedExtras).forEach(([prodId, qty]: [string, any]) => {
+    Object.entries(selectedExtras).forEach(([prodId, qty]) => {
       if (qty <= 0) return
       const product = products.find(p => p.id === prodId)
       if (product) {
         newExtras.push({ id: prodId, name: product.name, price: product.price, qty })
-        newExtrasTotal += product.price * qty
       }
     })
+
+    const newExtrasTotal = calculateNewExtrasTotal(newExtras)
 
     try {
       const data = await queueMutation('sessions', 'update', {
@@ -158,12 +178,12 @@ export default function SessionDetailPage() {
           session_id: session.id,
           customer_name: session.customer_name,
           seat_number: session.seat_number,
-          extras_added: Object.entries(selectedExtras).filter(([_, q]: [string, any]) => q > 0).map(([id, q]: [string, any]) => {
+          extras_added: Object.entries(selectedExtras).filter(([_, q]) => q > 0).map(([id, q]) => {
             const p = products.find(p => p.id === id)
             return { name: p?.name, qty: q, price: p?.price }
           })
         })
-      } catch (e) {}
+      } catch (e) { console.error(e) }
 
       setSession(data)
       setShowExtras(false)
@@ -176,9 +196,9 @@ export default function SessionDetailPage() {
 
   const handleRemoveExtra = async (index: number) => {
     if (!session) return
-    const newExtras = [...(session.extras as any[])]
-    const removed = newExtras.splice(index, 1)[0]
-    const newExtrasTotal = session.extras_total - (removed.price * removed.qty)
+    const newExtras: SessionExtra[] = [...getExtras(session)]
+    newExtras.splice(index, 1)
+    const newExtrasTotal = calculateNewExtrasTotal(newExtras)
 
     try {
       const data = await queueMutation('sessions', 'update', {
@@ -198,14 +218,49 @@ export default function SessionDetailPage() {
     if (!session) return
     setIsLoading(true)
     try {
-      const start = new Date(session.started_at).getTime()
-      const end = new Date().getTime()
-      const durationMinutes = Math.floor((end - start) / 60000)
-      const durationHours = durationMinutes / 60
-      const billedHours = session.rate_per_hour > 0 ? Math.max(1, durationHours) : durationHours
-      const finalTimeCost = billedHours * session.rate_per_hour
-      const rawTotal = finalTimeCost + session.extras_total
-      const totalAmount = Math.max(cafe?.premium_rate || 0, rawTotal)
+      const { durationMinutes, timeCost: finalTimeCost, totalAmount } = calculateSessionCost(
+        session as any,
+        {
+          defaultRate: cafe?.default_rate || 0,
+          premiumRate: cafe?.premium_rate || 0,
+        }
+      )
+
+      if (method === 'account' && clientAccount) {
+        const { canAfford, newBalance, shortfall } = calculateClientAccountDebit(
+          clientAccount.balance,
+          totalAmount
+        )
+        if (!canAfford) {
+          throw new Error(`Solde client insuffisant (${clientAccount.balance.toFixed(2)} DH). Manque: ${shortfall.toFixed(2)} DH`)
+        }
+
+        if (navigator.onLine && clientAccount.cafe_id) {
+          const { error: rpcError } = await (supabase.rpc as any)('process_client_balance_transaction', {
+            p_cafe_id: clientAccount.cafe_id,
+            p_client_id: clientAccount.id,
+            p_amount: totalAmount,
+            p_type: 'debit',
+            p_description: `Paiement session ${session.seat_number}`,
+            p_staff_id: staff?.id || null,
+            p_session_id: session.id
+          })
+          if (rpcError) throw rpcError;
+
+          // Update total_visits separately (balance and total_spent are handled by RPC)
+          await queueMutation('client_accounts', 'update', {
+            id: clientAccount.id,
+            total_visits: (clientAccount.total_visits || 0) + 1,
+          }, {
+            ...clientAccount,
+            balance: newBalance,
+            total_spent: (clientAccount.total_spent || 0) + totalAmount,
+            total_visits: (clientAccount.total_visits || 0) + 1,
+          })
+        } else {
+          throw new Error("Paiement par compte non disponible hors ligne.");
+        }
+      }
 
       const updatedSession = {
         ...session,
@@ -238,7 +293,7 @@ export default function SessionDetailPage() {
           total_amount: totalAmount,
           payment_method: method
         })
-      } catch (e) {}
+      } catch (e) { console.error(e) }
 
       addToast(t("sessions.session_closed_amount").replace("{{amount}}", totalAmount.toFixed(2)), "success")
       setShowEnd(false)
@@ -426,10 +481,10 @@ export default function SessionDetailPage() {
               </div>
 
               {/* Extras Lines */}
-              {(session.extras as any[]).length > 0 && (
+              {getExtras(session).length > 0 && (
                 <div className="space-y-3 pb-4 border-b border-gray-200">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Consommations</div>
-                  {(session.extras as any[]).map((extra, i) => (
+                  {getExtras(session).map((extra, i) => (
                     <div key={i} className="flex justify-between items-center group relative">
                       <div className="flex-1">
                         <div className="text-sm font-bold text-gray-800">{extra.name}</div>
@@ -584,7 +639,7 @@ export default function SessionDetailPage() {
 
       {/* End Session Sheet */}
       <BottomSheet isOpen={showEnd} onClose={() => setShowEnd(false)} title="Clôturer la session">
-        <div className="space-y-8 pt-4">
+        <div className="space-y-6 pt-4">
           <div className="bg-surface2 p-4 rounded-xl border border-border space-y-2">
             <div className="flex justify-between text-xs text-text3">
               <span>{session.customer_name} — Place {session.seat_number}</span>
@@ -603,12 +658,135 @@ export default function SessionDetailPage() {
             </div>
           </div>
 
+          {/* Payment Method Selector */}
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold text-text3 uppercase tracking-wider">Mode de paiement</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { id: 'cash' as const, label: 'Espèces', icon: Banknote },
+                { id: 'card' as const, label: 'Carte', icon: CreditCard },
+                { id: 'account' as const, label: 'Compte', icon: Wallet },
+                { id: 'free' as const, label: 'Offert', icon: Gift },
+              ].map(m => {
+                const Icon = m.icon;
+                const isSelected = paymentMethod === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod(m.id);
+                      if (m.id === 'cash' && !cashTendered) {
+                        setCashTendered(totalAmount.toString());
+                      }
+                    }}
+                    className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${
+                      isSelected
+                        ? 'bg-accent text-white border-accent shadow-md shadow-accent/20'
+                        : 'bg-surface2 border-border text-text hover:border-border2'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span>{m.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Cash Change Calculator */}
+          {paymentMethod === 'cash' && (() => {
+            const tenderedNum = parseFloat(cashTendered) || 0;
+            const changeInfo = calculateChange(totalAmount, tenderedNum);
+            return (
+              <div className="p-4 bg-surface2 rounded-xl border border-border space-y-3">
+                <div className="flex justify-between items-center text-xs font-bold text-text3">
+                  <span>Espèces reçues</span>
+                  <div className="flex gap-1">
+                    {[totalAmount, 50, 100, 200]
+                      .filter((val, idx, arr) => arr.indexOf(val) === idx && val >= totalAmount)
+                      .slice(0, 4)
+                      .map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setCashTendered(val.toString())}
+                          className="px-2 py-1 bg-surface border border-border hover:border-accent text-[11px] font-mono font-bold rounded-lg text-text"
+                        >
+                          {val.toFixed(0)} DH
+                        </button>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    value={cashTendered}
+                    onChange={(e) => setCashTendered(e.target.value)}
+                    placeholder={totalAmount.toFixed(2)}
+                    className="w-full h-11 bg-surface border border-border rounded-xl px-4 font-mono font-bold text-text text-sm focus:outline-none focus:border-accent"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text3">DH</span>
+                </div>
+
+                <div className="flex justify-between items-center pt-2 border-t border-border/50 text-xs">
+                  <span className="font-bold text-text2">Monnaie à rendre</span>
+                  <span className={`font-mono font-black text-sm ${
+                    changeInfo.isSufficient ? 'text-green-500' : 'text-error'
+                  }`}>
+                    {changeInfo.isSufficient 
+                      ? `${changeInfo.change.toFixed(2)} DH` 
+                      : `Manque ${changeInfo.shortfall.toFixed(2)} DH`}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Account Balance Debit Preview */}
+          {paymentMethod === 'account' && (
+            <div className="p-4 bg-surface2 rounded-xl border border-border space-y-2">
+              {clientAccount ? (() => {
+                const debit = calculateClientAccountDebit(clientAccount.balance, totalAmount);
+                return (
+                  <>
+                    <div className="flex justify-between text-xs text-text3">
+                      <span>Solde actuel ({clientAccount.name})</span>
+                      <span className="font-mono font-bold text-text">{clientAccount.balance.toFixed(2)} DH</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-text3">
+                      <span>Débit session</span>
+                      <span className="font-mono font-bold text-error">-{totalAmount.toFixed(2)} DH</span>
+                    </div>
+                    <div className="flex justify-between text-xs pt-2 border-t border-border font-bold">
+                      <span className="text-text">Nouveau solde</span>
+                      <span className={`font-mono ${debit.canAfford ? 'text-green-500' : 'text-error'}`}>
+                        {debit.newBalance.toFixed(2)} DH
+                      </span>
+                    </div>
+                    {!debit.canAfford && (
+                      <p className="text-[11px] text-error font-medium mt-1">
+                        Solde insuffisant (manque {debit.shortfall.toFixed(2)} DH).
+                      </p>
+                    )}
+                  </>
+                );
+              })() : (
+                <p className="text-xs text-warning">
+                  Aucun compte client associé à cette session.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="pt-2">
             <Button
               className="w-full h-14"
-              onClick={() => handleEndSession('cash')}
+              onClick={() => handleEndSession(paymentMethod)}
             >
-              Confirmer
+              Confirmer le paiement
             </Button>
           </div>
         </div>

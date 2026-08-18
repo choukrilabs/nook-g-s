@@ -23,6 +23,7 @@ import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
 import { useTranslation } from "../i18n";
 import { useAudit } from "../hooks/useAudit";
+import { determineSessionRate } from "../lib/pricing";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Session, Product } from "../types";
@@ -175,9 +176,12 @@ export default function NewSessionPage() {
         }
       }
 
-      const rate = sessionMode === "consumption" ? 0 : cafe.default_rate;
+      const rate = determineSessionRate(sessionMode, {
+        defaultRate: cafe.default_rate,
+        premiumRate: cafe.premium_rate || 0,
+      });
 
-      let newExtras: any[] = [];
+      const newExtras: any[] = [];
       let newExtrasTotal = 0;
 
       if (sessionMode === "consumption") {
